@@ -7,6 +7,8 @@ SDK authentication has its own fixed 15-second timeout. No token is generated at
 import time
 from collections import defaultdict, deque
 from collections.abc import Callable
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from threading import RLock
 from typing import Any
 
@@ -72,7 +74,21 @@ def translate_error(exc: Exception, authenticating: bool = False) -> ServiceErro
     if isinstance(exc, httpx.HTTPStatusError):
         status = str(exc.response.status_code)
     if status == "429":
-        return ServiceError("rate_limited", "Groww rate limit reached; retry later", 429, 60)
+        retry_after = 60
+        if isinstance(exc, httpx.HTTPStatusError):
+            raw = exc.response.headers.get("Retry-After", "")
+            try:
+                retry_after = max(1, int(raw))
+            except ValueError:
+                try:
+                    retry_after = max(
+                        1, int((parsedate_to_datetime(raw) - datetime.now(UTC)).total_seconds()) + 1
+                    )
+                except (ValueError, TypeError, OverflowError):
+                    pass
+        return ServiceError(
+            "rate_limited", "Groww rate limit reached; retry later", 429, retry_after
+        )
     if status in {"401", "403"} or authenticating and status == "400":
         return ServiceError(
             "groww_authentication_failed",
@@ -136,6 +152,7 @@ class GrowwClient:
             else:
                 try:
                     kwargs["totp"] = pyotp.TOTP(credential.get_secret_value()).now()
+                    register_secret(kwargs["totp"])
                 except (ValueError, TypeError):
                     raise ServiceError(
                         "groww_not_configured", "GROWW_TOTP_SECRET is not a valid TOTP seed", 503
@@ -148,7 +165,10 @@ class GrowwClient:
             self._token = token
         except Exception as exc:
             self._auth_retry_at = time.monotonic() + 60
-            raise translate_error(exc, authenticating=True) from None
+            error = translate_error(exc, authenticating=True)
+            if error.status == 429:
+                self._limiter.blocked_until = time.monotonic() + (error.retry_after or 60)
+            raise error from None
 
     def _read(self, operation: Callable[[], Any], category: str = "read") -> dict:
         with self._lock:
@@ -216,6 +236,8 @@ class GrowwClient:
                 raise invalid_response()
             if body.get("status") == "FAILURE":
                 error = body.get("error", {})
+                if not isinstance(error, dict):
+                    raise invalid_response()
                 raise GrowwAPIException("Groww request failed", str(error.get("code", "")))
             return body.get("payload", body)
 

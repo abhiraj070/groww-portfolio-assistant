@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from datetime import date
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from pydantic import ValidationError
 
@@ -31,9 +32,9 @@ class Services:
                 sectors = SectorMetadata.model_validate_json(
                     settings.sector_metadata_file.read_text(encoding="utf-8")
                 )
-                if sectors.as_of > date.today():
+                if sectors.as_of > datetime.now(ZoneInfo("Asia/Kolkata")).date():
                     raise ValueError("Future classification date")
-            except (OSError, ValidationError, ValueError):
+            except (OSError, ValidationError, ValueError, UnicodeError):
                 raise ServiceError(
                     "invalid_sector_metadata", "Sector metadata file is missing or invalid", 503
                 ) from None

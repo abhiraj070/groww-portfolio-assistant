@@ -11,6 +11,8 @@ dependencies = [
     "pydantic>=2.10,<3",
     "pydantic-settings>=2.7,<3",
     "pyotp>=2.9,<3",
+    "requests>=2.32,<3",
+    "tzdata>=2025.2",
     "python-dotenv>=1,<2",
     "uvicorn>=0.34,<1",
 ]

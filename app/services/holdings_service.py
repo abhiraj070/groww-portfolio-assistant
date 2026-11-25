@@ -10,7 +10,9 @@ class HoldingsService:
 
     def get_holdings(self) -> HoldingsResponse:
         rows = parse_collection(self.client.get_holdings(), "holdings", Holding)
-        if len({row.isin for row in rows}) != len(rows):
+        if len({row.isin for row in rows}) != len(rows) or len(
+            {row.trading_symbol for row in rows}
+        ) != len(rows):
             # Fail rather than value an ambiguous duplicate DEMAT asset twice.
             raise invalid_response()
         return HoldingsResponse(holdings=rows)

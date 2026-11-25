@@ -20,3 +20,12 @@ def isolated_settings(monkeypatch, tmp_path):
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
+
+
+@pytest.fixture(autouse=True)
+def prevent_live_network(monkeypatch):
+    def blocked(*args, **kwargs):
+        raise AssertionError("Tests must mock upstream HTTP; live network is disabled")
+
+    monkeypatch.setattr("requests.sessions.Session.request", blocked)
+    monkeypatch.setattr("httpx.HTTPTransport.handle_request", blocked)

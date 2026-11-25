@@ -48,6 +48,13 @@ def create_app() -> FastAPI:
     private.include_router(market_data.router)
     application.include_router(private)
 
+    @application.middleware("http")
+    async def privacy_headers(request: Request, call_next):
+        response = await call_next(request)
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
+
     @application.exception_handler(ServiceError)
     async def service_error(request: Request, exc: ServiceError) -> JSONResponse:
         response = error_response(exc.status, exc.code, exc.message)
