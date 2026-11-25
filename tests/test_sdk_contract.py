@@ -3,10 +3,12 @@
 from unittest.mock import Mock
 
 import httpx
+import pytest
 from fastapi.testclient import TestClient
 
 from app.api.dependencies import get_services
 from app.core.config import Settings
+from app.core.exceptions import ServiceError
 from app.main import create_app
 from app.services.container import Services
 from app.services.groww_client import GrowwClient
@@ -148,3 +150,47 @@ def test_real_sdk_through_rest_routes(monkeypatch):
     auth.assert_called_once()
     assert "/changelog" not in reads
     gateway.close()
+
+
+def test_http_401_refreshes_despite_provider_business_error_code(monkeypatch):
+    rejected = Mock(status_code=401, ok=False)
+    rejected.json.return_value = {
+        "status": "FAILURE",
+        "error": {"code": "SYNTHETIC_PROVIDER_CODE", "message": "synthetic-sensitive-message"},
+    }
+    accepted = Mock(status_code=200, ok=True)
+    accepted.json.return_value = {"payload": {"holdings": []}}
+    reads = Mock(side_effect=[rejected, accepted])
+    monkeypatch.setattr("requests.get", reads)
+    auth_response = Mock(ok=True, status_code=200)
+    auth_response.json.return_value = {"token": "synthetic-token"}
+    auth = Mock(return_value=auth_response)
+    monkeypatch.setattr("requests.post", auth)
+    gateway = GrowwClient(
+        Settings(groww_api_key="synthetic-key", groww_api_secret="synthetic-secret")
+    )
+    try:
+        assert gateway.get_holdings() == {"holdings": []}
+        assert auth.call_count == 2
+    finally:
+        gateway.close()
+
+
+def test_non_json_downtime_is_availability_error(monkeypatch):
+    response = Mock(ok=False, status_code=503)
+    response.json.side_effect = ValueError("synthetic-sensitive-message")
+    monkeypatch.setattr("requests.get", Mock(return_value=response))
+    auth_response = Mock(ok=True, status_code=200)
+    auth_response.json.return_value = {"token": "synthetic-token"}
+    monkeypatch.setattr("requests.post", Mock(return_value=auth_response))
+    gateway = GrowwClient(
+        Settings(groww_api_key="synthetic-key", groww_api_secret="synthetic-secret")
+    )
+    try:
+        with pytest.raises(ServiceError) as error:
+            gateway.get_holdings()
+        assert error.value.code == "upstream_unavailable"
+        assert "synthetic-sensitive-message" not in str(error.value)
+        response.json.assert_not_called()
+    finally:
+        gateway.close()

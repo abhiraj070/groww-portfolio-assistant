@@ -28,6 +28,15 @@ class QuietGrowwAPI(GrowwAPI):
         # SDK 1.5.0 constructor otherwise makes an unrelated request with no timeout.
         return None
 
+    def _parse_response(self, response):
+        # SDK 1.5.0 otherwise parses a FAILURE body before checking HTTP status,
+        # which can hide an expired token behind a provider-specific business code.
+        if response.status_code in self._ERROR_MAP:
+            raise self._ERROR_MAP[response.status_code]()
+        if not response.ok:
+            raise GrowwAPIException("Groww request failed", str(response.status_code))
+        return super()._parse_response(response)
+
 
 class RateLimiter:
     """Conservative per-process budgets shared by endpoint category, without sleeping."""
