@@ -1,8 +1,9 @@
 # Groww Portfolio Assistant
 
 A strictly read-only Python backend for accessing and analysing a personal Groww investment
-portfolio. The original backend is complete; the expanded platform is being implemented in
-[ordered phases](docs/implementation-plan.md). Live account connectivity has **not**
+portfolio. The expanded backend was implemented in six
+[ordered phases](docs/implementation-plan.md), with explicit source and coverage limits.
+Live account connectivity has **not**
 been verified: tests use synthetic data and mocked upstream HTTP, including tests of the real
 installed SDK. No credentials are bundled, and no trading or MCP server is implemented.
 
@@ -220,15 +221,15 @@ and positions first. Then verify quotes and compare the scope of summary results
 account. Do not interpret passing mocked tests as proof of real account connectivity.
 
 The repository is connected to `https://github.com/abhiraj070/groww-portfolio-assistant.git`.
-Milestones have separate commits on `main`. Check tests, lint, staged filenames and diffs before
+Expanded milestones have separate commits on stacked phase branches. Main is unchanged.
+Check tests, lint, staged filenames and diffs before
 committing; never stage `.env` or force-push.
 
 ## Architecture and future MCP
 
-See [architecture](docs/architecture.md). FastAPI is an adapter over reusable service objects.
-Future MCP tools can map `get_portfolio_summary` and `get_portfolio_analytics` to PortfolioService,
-`get_holdings` and `get_positions` to their services, `get_orders` to OrdersService, and
-`get_stock_quote` to MarketDataService. No business logic needs to move into MCP.
+See [architecture](docs/architecture.md) and the [typed read facade](docs/ai-readiness.md).
+FastAPI and future AI adapters share service objects. No financial logic needs to move into
+MCP, and no MCP server is implemented.
 
 The service has no trading routes, generic SDK dispatcher, order creation, modification or
 cancellation methods. Historical imports, persistent records and dated performance are available

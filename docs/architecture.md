@@ -113,6 +113,10 @@ close its client when shutting down. MCP must apply its own caller authorization
 method dispatcher or trading write path is exposed. New SDK versions require compatibility review
 before updating the exact pin and lockfile.
 
+ReadTools supplies explicit typed read methods over the same container; see
+[AI-readiness contracts](ai-readiness.md). Services.close owns provider/catalog transports.
+The read facade exposes no imports, capture, generic SDK calls or financial writes.
+
 ## Validation
 
 Unit and API tests use synthetic fixtures; outbound Requests and HTTPX transports are blocked

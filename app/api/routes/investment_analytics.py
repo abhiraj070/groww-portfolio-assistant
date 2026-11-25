@@ -49,15 +49,7 @@ def risk(services: ServiceDependency):
 
 @router.get("/sector-exposure", response_model=SectorExposureResponse)
 def sectors(services: ServiceDependency):
-    report = services.portfolio.get_portfolio_analytics()
-    return dict(
-        sectors=report.sector_allocation,
-        unclassified_market_value=report.unclassified_market_value,
-        source=report.sector_metadata_source,
-        as_of=report.sector_metadata_as_of,
-        scope="equity_only",
-        warnings=["MF constituent sector data is unavailable; these are equity portfolio weights."],
-    )
+    return services.investment.sector_exposure()
 
 
 @router.get("/tax-report", response_model=TaxDataResponse)

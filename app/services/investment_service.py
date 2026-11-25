@@ -9,6 +9,7 @@ from app.schemas.investment_analytics import (
     RealisedGains,
     RiskHolding,
     RiskResponse,
+    SectorExposureResponse,
     TaxDataResponse,
 )
 from app.utils.calculations import percentage
@@ -78,6 +79,16 @@ class InvestmentService:
             total_investment_costs=None
             if not charges or any(c is None for c in charges)
             else sum(charges, ZERO),
+        )
+
+    def sector_exposure(self) -> SectorExposureResponse:
+        report = self.portfolio.get_portfolio_analytics()
+        return SectorExposureResponse(
+            sectors=report.sector_allocation,
+            unclassified_market_value=report.unclassified_market_value,
+            source=report.sector_metadata_source,
+            as_of=report.sector_metadata_as_of,
+            warnings=["MF constituent sector data is unavailable; these are equity weights."],
         )
 
     def risk(self) -> RiskResponse:

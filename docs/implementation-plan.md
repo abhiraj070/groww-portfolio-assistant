@@ -2,6 +2,28 @@
 
 Audit date: 2026-11-25. Baseline: `18ed56b`, clean `main` checkout.
 
+## Delivery status
+
+Implemented sequentially on six phase branches, with tests, documentation and separate
+milestone commits/pushes. Branches are stacked: later phases contain earlier phases.
+Main remains unchanged; nothing is deployed automatically.
+
+| Phase | Branch | Delivered scope |
+| --- | --- | --- |
+| 1 | feature/equity-analytics | Stock namespace, verified order/execution reads, catalog, tradebook ledger and FIFO |
+| 2 | feature/mutual-fund-analytics | Statements/AMFI ingestion, NAV/scheme history, SIP/dividend/switch records and FIFO valuation |
+| 3 | feature/combined-analytics | Combined exposure, covered performance/XIRR/CAGR, concentration and disposal data |
+| 4 | feature/historical-data | Migrations, snapshots, verified split/bonus/MF unit adjustments |
+| 5 | feature/security-testing | Whole-API auth/read-only checks, inbound limits, bounded inputs and Decimal precision |
+| 6 | feature/ai-readiness | Typed reusable read facade; no MCP server |
+
+Source limitations stay explicit: canonical normalization replaces generic contract-note/CAS
+PDF parsing; no inferred active SIP mandates; benchmark/TER/fund-overlap sources unconfigured;
+no MF sector look-through, equity dividend feed, fractional cash-in-lieu/reorganization mapper,
+tax liability or volatility from insufficient history. AMFI reports are imported, not live.
+XIRR needs covered snapshots and actual external cash flows. No live account tests or financial
+transactions were performed.
+
 ## Audit and gaps
 
 The existing FastAPI application owns a single Services container. Routes are adapters;
