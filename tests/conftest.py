@@ -8,6 +8,8 @@ def isolated_settings(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     for name in (
         "SERVICE_API_KEY",
+        "VALUATION_EXCHANGE",
+        "SECTOR_METADATA_FILE",
         "GROWW_AUTH_METHOD",
         "GROWW_API_KEY",
         "GROWW_API_SECRET",

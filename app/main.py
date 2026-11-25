@@ -1,14 +1,19 @@
-"""Minimal Phase 1 application; no Groww operations are implemented yet."""
+"""Read-only portfolio HTTP application."""
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import APIRouter, Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
+from app.api.routes import market_data, portfolio
 from app.core.config import get_settings
+from app.core.exceptions import ServiceError
+from app.core.logging import configure_secret_redaction
+from app.core.security import require_api_key
 from app.schemas.common import ErrorDetail, ErrorResponse, HealthResponse
+from app.services.container import Services
 
 
 def error_response(status_code: int, code: str, message: str) -> JSONResponse:
@@ -18,20 +23,37 @@ def error_response(status_code: int, code: str, message: str) -> JSONResponse:
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
-    get_settings()
-    yield
+    settings = get_settings()
+    configure_secret_redaction(settings)
+    application.state.services = Services.build(settings)
+    try:
+        yield
+    finally:
+        application.state.services.client.close()
 
 
 def create_app() -> FastAPI:
     application = FastAPI(
         title="Groww Portfolio Assistant",
         version="0.1.0",
-        description="Read-only personal portfolio service. Phase 1: configuration and health only.",
+        description="Read-only personal Groww portfolio service.",
         lifespan=lifespan,
         docs_url=None,
         redoc_url=None,
         openapi_url=None,
     )
+
+    private = APIRouter(prefix="/api/v1", dependencies=[Depends(require_api_key)])
+    private.include_router(portfolio.router)
+    private.include_router(market_data.router)
+    application.include_router(private)
+
+    @application.exception_handler(ServiceError)
+    async def service_error(request: Request, exc: ServiceError) -> JSONResponse:
+        response = error_response(exc.status, exc.code, exc.message)
+        if exc.retry_after is not None:
+            response.headers["Retry-After"] = str(exc.retry_after)
+        return response
 
     @application.exception_handler(HTTPException)
     async def http_error(request: Request, exc: HTTPException) -> JSONResponse:

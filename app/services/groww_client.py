@@ -18,6 +18,7 @@ from growwapi.groww.exceptions import GrowwAPIException, InstrumentNotFoundExcep
 
 from app.core.config import Settings
 from app.core.exceptions import ServiceError, invalid_response
+from app.core.logging import register_secret
 
 
 class QuietGrowwAPI(GrowwAPI):
@@ -142,6 +143,7 @@ class GrowwClient:
             token = self._sdk_factory.get_access_token(**kwargs)
             if not isinstance(token, str) or not token.strip():
                 raise invalid_response()
+            register_secret(token)
             self._sdk = self._sdk_factory(token)
             self._token = token
         except Exception as exc:

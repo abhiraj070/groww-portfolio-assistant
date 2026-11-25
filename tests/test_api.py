@@ -42,9 +42,9 @@ def test_private_route_authentication(monkeypatch):
     assert response.status_code == 200
 
 
-def test_unimplemented_routes_return_404():
+def test_unknown_routes_return_404():
     with TestClient(create_app()) as client:
-        response = client.get("/api/v1/portfolio/holdings")
+        response = client.get("/unknown")
     assert response.status_code == 404
     assert response.json() == {"error": {"code": "http_404", "message": "Resource not found"}}
 
