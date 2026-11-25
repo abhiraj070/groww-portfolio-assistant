@@ -1,5 +1,18 @@
 # Architecture
 
+## Expanded equity module
+
+`/stocks` shares existing portfolio/market handlers, adding valued holdings and thin adapters
+for order details, per-order executions, catalog and ledger analytics. `LedgerService` owns
+local SQLite connections per operation, transactionally imports canonical delivery executions,
+preserves original files/rows and stores Decimal JSON strings. It opens lazily (not on startup).
+Schema version 1 introduces imports and equity transactions; no extra DB server is necessary
+for this single-account local service. SQLAlchemy/PostgreSQL is evaluated in Phase 4.
+`EquityHistoryService` recalculates FIFO from the ledger, with incomplete-history and unknown
+charge propagation. No business service imports FastAPI. CLI ingestion never calls Groww.
+`InstrumentsService` reads the official public catalog with bounded HTTPX streaming, a timeout,
+and a lock-protected cache. Services.close owns both provider and catalog clients.
+
 ## Boundaries
 
 FastAPI routes -> reusable services -> read-only GrowwClient -> official Groww SDK or the

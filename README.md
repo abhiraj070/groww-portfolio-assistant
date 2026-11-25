@@ -1,11 +1,17 @@
 # Groww Portfolio Assistant
 
 A strictly read-only Python backend for accessing and analysing a personal Groww investment
-portfolio. All seven implementation phases are complete. Live account connectivity has **not**
+portfolio. The original backend is complete; the expanded platform is being implemented in
+[ordered phases](docs/implementation-plan.md). Live account connectivity has **not**
 been verified: tests use synthetic data and mocked upstream HTTP, including tests of the real
 installed SDK. No credentials are bundled, and no trading or MCP server is implemented.
 
 ## Capabilities
+
+The expanded equity module is available under `/api/v1/stocks`, with order details,
+per-order executions, valued holdings, official instrument lookup and imported tradebook/FIFO
+realised gains. See [equity import instructions](docs/equity-imports.md). Imports run locally;
+all HTTP routes remain read-only. The ledger is not assumed to be complete lifetime history.
 
 - Fetch holdings, positions, account profile, and paginated orders for the current trading day.
 - Retrieve LTP, quotes, current OHLC snapshots, and historical candles.
@@ -21,7 +27,7 @@ is not a lifetime order archive. Returns exclude fees, taxes, dividends and exte
 
 ## Stack and prerequisites
 
-Python 3.12+, uv, FastAPI, Pydantic v2, Pydantic Settings, official `growwapi==1.5.0`, HTTPX,
+Python 3.13+, uv, FastAPI, Pydantic v2, Pydantic Settings, official `growwapi==1.5.0`, HTTPX,
 Requests (SDK transport), PyOTP, python-dotenv, Uvicorn, pytest and Ruff. Development is pinned
 to Python 3.13. Dependencies and hashes are recorded in `uv.lock`.
 

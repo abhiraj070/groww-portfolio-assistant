@@ -62,6 +62,7 @@ class AnalyticsService:
             rows.append(
                 HoldingValuation(
                     trading_symbol=holding.trading_symbol,
+                    name=holding.name,
                     isin=holding.isin,
                     quantity=holding.quantity,
                     average_price=holding.average_price,

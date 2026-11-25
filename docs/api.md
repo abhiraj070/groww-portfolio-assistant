@@ -1,5 +1,46 @@
 # API reference and financial semantics
 
+## Equity namespace
+
+Legacy `/portfolio` and `/market` routes retain their behavior. New protected reads:
+
+| GET path under `/api/v1/stocks` | Response and parameters |
+| --- | --- |
+| `/holdings` | List of `HoldingValuation`, including costs, LTP, returns, weights and optional source name |
+| `/positions` | Existing `PositionsResponse`; optional `segment` |
+| `/portfolio/summary` | Existing `PortfolioSummary` (positions P&L scope remains unchanged) |
+| `/portfolio/analytics` | Existing `AnalyticsResponse` |
+| `/portfolio/allocation` | List of `HoldingValuation` with complete-value-denominator weights |
+| `/orders` | Existing `OrdersResponse`; current-day scope, page/page_size/segment |
+| `/orders/{order_id}` | `Order`; optional segment (default CASH), exact provider detail |
+| `/orders/{order_id}/trades` | `TradesResponse`: trades, page, page_size, possible_next_page, scope |
+| `/trades`, `/tradebook` | `TradebookResponse`: imported transactions, total, offset, limit, scope, history_complete |
+| `/sold` | `EquityHistoryResponse`, stocks with any imported sales (including incomplete history) |
+| `/realised-pnl` | `EquityHistoryResponse`, every imported stock and matched acquisition/disposal lots |
+| `/quote/{symbol}`, `/ltp/{symbol}`, `/ohlc/{symbol}`, `/candles` | Existing market response models/parameters |
+| `/instruments` | `InstrumentsResponse`: instruments, total, offset, limit, source, retrieved_at |
+
+Execution reads accept page 0..10000 and page_size 1..50 (default 50); identifiers are
+1..100 letters, digits, underscores or hyphens. Provider execution scope is per-order,
+not lifetime history; paging never asserts an overall total. Invalid/duplicate executions
+or mismatched order IDs fail with `invalid_upstream_response`.
+
+Ledger and instrument pagination: offset 0..1000000 (default 0), limit 1..1000 (default 100).
+Both accept optional exact `symbol`; instruments accept exchange NSE/BSE (default NSE)
+and return CASH instruments from the official public catalog, cached 15 minutes with a
+retrieval timestamp. Downloads have configured timeout and a 64 MiB decompressed bound.
+Missing source names/ISINs are null, never guessed. Instruments are not portfolio holdings.
+
+`EquityHistoryResponse` contains `stocks`, gross/net realised P&L, scope, history_complete=false
+and warnings. Each stock has quantities bought/sold/remaining, weighted purchase/sale prices,
+remaining cost, first purchase/last transaction dates, imported-inventory status, unmatched sold
+quantity and FIFO `matches`. Each match reports buy/sell IDs, dates, holding_days, quantity,
+cost, proceeds, gross gain, charges and net gain. All financial values are Decimal strings.
+See [import schema and calculation rules](equity-imports.md). Imports are offline only.
+`ledger_unavailable` is a sanitised 503; invalid imports are 422 and identity conflicts 409
+in the service/CLI layer. Neither imported gains nor current-position gains establish lifetime
+taxable gains. Do not sum them together.
+
 ## Access and response format
 
 Base URL: `http://127.0.0.1:8000`. All `/api/v1` routes require `X-API-Key`.

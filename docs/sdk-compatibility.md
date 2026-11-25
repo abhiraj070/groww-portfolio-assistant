@@ -12,10 +12,18 @@ behavior, not just names from examples. `uv.lock` pins all dependencies and hash
 | Holdings | `get_holdings_for_user(timeout=...)` |
 | Positions | `get_positions_for_user(segment=..., timeout=...)` |
 | Profile | `get_user_profile(timeout=...)` |
+| Order detail | `get_order_detail(groww_order_id=..., segment=..., timeout=...)` |
+| Order executions | `get_trade_list_for_order(groww_order_id=..., segment=..., page=..., page_size=..., timeout=...)` |
 | Quote | `get_quote(trading_symbol=..., exchange=..., segment=..., timeout=...)` |
 | LTP | `get_ltp(exchange_trading_symbols=tuple(...), segment=..., timeout=...)` |
 | OHLC | `get_ohlc(exchange_trading_symbols=tuple(...), segment=..., timeout=...)` |
 | Candles | `get_historical_candles(exchange=..., segment=..., groww_symbol=..., start_time=..., end_time=..., candle_interval=..., timeout=...)` |
+
+The execution method transmits both page and page_size correctly in SDK 1.5.0. Detail and
+execution reads share existing authentication, error translation and read budgets. They do
+not establish historical discovery. No provider writes are used. Catalog reads use the official
+CSV linked from the instruments documentation through bounded HTTPX, because SDK catalog
+helpers download/cache through pandas without the application's timeout/size controls.
 
 LTP/OHLC use exchange-prefixed symbols such as `NSE_RELIANCE`. Historical Groww symbols use
 hyphens, such as `NSE-RELIANCE`. The deprecated `get_historical_candle_data` is not used.

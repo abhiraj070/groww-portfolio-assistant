@@ -7,7 +7,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
-from app.api.routes import market_data, portfolio
+from app.api.routes import market_data, portfolio, stocks
 from app.core.config import get_settings
 from app.core.exceptions import ServiceError
 from app.core.logging import configure_secret_redaction
@@ -29,7 +29,7 @@ async def lifespan(application: FastAPI):
     try:
         yield
     finally:
-        application.state.services.client.close()
+        application.state.services.close()
 
 
 def create_app() -> FastAPI:
@@ -46,6 +46,7 @@ def create_app() -> FastAPI:
     private = APIRouter(prefix="/api/v1", dependencies=[Depends(require_api_key)])
     private.include_router(portfolio.router)
     private.include_router(market_data.router)
+    private.include_router(stocks.router)
     application.include_router(private)
 
     @application.middleware("http")
