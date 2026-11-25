@@ -11,6 +11,7 @@ class Holding(BaseModel):
     model_config = ConfigDict(extra="allow", allow_inf_nan=False)
     trading_symbol: str = Field(min_length=1, max_length=100)
     isin: str = Field(min_length=1, max_length=30)
+    name: str | None = None
     quantity: NonNegative
     average_price: NonNegative | None = None
     pledge_quantity: NonNegative | None = None

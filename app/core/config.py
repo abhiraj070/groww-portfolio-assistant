@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     service_api_key: SecretStr | None = Field(default=None, repr=False)
     valuation_exchange: Literal["NSE", "BSE"] = "NSE"
     sector_metadata_file: Path | None = None
+    ledger_path: Path = Path("data/investments.sqlite3")
+    api_requests_per_minute: int = Field(default=300, ge=1, le=10000)
     groww_auth_method: Literal["api_key", "totp"] = "api_key"
     groww_api_key: SecretStr | None = Field(default=None, repr=False)
     groww_api_secret: SecretStr | None = Field(default=None, repr=False)

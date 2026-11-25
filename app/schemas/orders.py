@@ -28,3 +28,25 @@ class OrdersResponse(BaseModel):
     page_size: int
     possible_next_page: int | None
     scope: Literal["current_trading_day"] = "current_trading_day"
+
+
+class Trade(BaseModel):
+    model_config = ConfigDict(extra="allow", allow_inf_nan=False)
+    groww_order_id: str = Field(min_length=1)
+    exchange_trade_id: str = Field(min_length=1)
+    trading_symbol: str = Field(min_length=1)
+    isin: str = Field(min_length=1)
+    quantity: NonNegative
+    price: NonNegative
+    exchange: str
+    segment: str
+    transaction_type: Literal["BUY", "SELL"]
+    trade_date_time: datetime
+
+
+class TradesResponse(BaseModel):
+    trades: list[Trade]
+    page: int
+    page_size: int
+    possible_next_page: int | None
+    scope: Literal["provider_order_executions"] = "provider_order_executions"

@@ -1,11 +1,29 @@
 # Groww Portfolio Assistant
 
 A strictly read-only Python backend for accessing and analysing a personal Groww investment
-portfolio. All seven implementation phases are complete. Live account connectivity has **not**
+portfolio. The expanded backend was implemented in six
+[ordered phases](docs/implementation-plan.md), with explicit source and coverage limits.
+Live account connectivity has **not**
 been verified: tests use synthetic data and mocked upstream HTTP, including tests of the real
 installed SDK. No credentials are bundled, and no trading or MCP server is implemented.
 
 ## Capabilities
+
+The expanded equity module is available under `/api/v1/stocks`, with order details,
+per-order executions, valued holdings, official instrument lookup and imported tradebook/FIFO
+realised gains. See [equity import instructions](docs/equity-imports.md). Imports run locally;
+all HTTP routes remain read-only. The ledger is not assumed to be complete lifetime history.
+
+The mutual-fund module under `/api/v1/mf` reads normalized statements and imported AMFI NAV
+observations: holdings, purchases, SIP history, redemptions, dividends and FIFO gains.
+See [MF ingestion and metric limitations](docs/mutual-funds.md).
+
+Combined reads under `/api/v1/analytics` cover investment value, asset exposure, imported gains
+and snapshot/cash-flow-based performance. [Metric assumptions and input formats](docs/performance.md)
+explain when XIRR, CAGR and historical returns are available.
+
+[Historical storage](docs/storage.md) covers versioned migrations, explicit snapshot capture
+and verified stock/MF unit adjustments. Private ledger files remain outside Git.
 
 - Fetch holdings, positions, account profile, and paginated orders for the current trading day.
 - Retrieve LTP, quotes, current OHLC snapshots, and historical candles.
@@ -21,7 +39,7 @@ is not a lifetime order archive. Returns exclude fees, taxes, dividends and exte
 
 ## Stack and prerequisites
 
-Python 3.12+, uv, FastAPI, Pydantic v2, Pydantic Settings, official `growwapi==1.5.0`, HTTPX,
+Python 3.13+, uv, FastAPI, Pydantic v2, Pydantic Settings, official `growwapi==1.5.0`, HTTPX,
 Requests (SDK transport), PyOTP, python-dotenv, Uvicorn, pytest and Ruff. Development is pinned
 to Python 3.13. Dependencies and hashes are recorded in `uv.lock`.
 
@@ -104,6 +122,8 @@ Environment variables override `.env`, which is read from the working directory.
 | `GROWW_REQUEST_TIMEOUT_SECONDS` | SDK read and HTTPX timeout; default 10, greater than 0 and at most 60 |
 | `VALUATION_EXCHANGE` | `NSE` (default) or `BSE`; verify that holdings trade under these symbols there |
 | `SECTOR_METADATA_FILE` | Optional path to operator-verified classification JSON; leave unset otherwise |
+| `LEDGER_PATH` | Private local SQLite ledger; default data/investments.sqlite3 |
+| `API_REQUESTS_PER_MINUTE` | Process-wide inbound budget; default 300 per rolling minute |
 
 Groww credentials can be absent while checking process health. Private reads then return
 `groww_not_configured`, never a fake successful portfolio. If a configured sector file is missing,
@@ -159,6 +179,7 @@ All paths below require `X-API-Key` except `/health`. Financial Decimal values a
 
 See [API semantics and errors](docs/api.md) for query parameters, completeness rules and error
 codes, and [SDK compatibility](docs/sdk-compatibility.md) for verified methods and exceptions.
+See [security and reliability](docs/security.md) for inbound limits, import bounds and privacy.
 
 ## Optional sector classifications
 
@@ -200,16 +221,16 @@ and positions first. Then verify quotes and compare the scope of summary results
 account. Do not interpret passing mocked tests as proof of real account connectivity.
 
 The repository is connected to `https://github.com/abhiraj070/groww-portfolio-assistant.git`.
-Milestones have separate commits on `main`. Check tests, lint, staged filenames and diffs before
+Expanded milestones have separate commits on stacked phase branches. Main is unchanged.
+Check tests, lint, staged filenames and diffs before
 committing; never stage `.env` or force-push.
 
 ## Architecture and future MCP
 
-See [architecture](docs/architecture.md). FastAPI is an adapter over reusable service objects.
-Future MCP tools can map `get_portfolio_summary` and `get_portfolio_analytics` to PortfolioService,
-`get_holdings` and `get_positions` to their services, `get_orders` to OrdersService, and
-`get_stock_quote` to MarketDataService. No business logic needs to move into MCP.
+See [architecture](docs/architecture.md) and the [typed read facade](docs/ai-readiness.md).
+FastAPI and future AI adapters share service objects. No financial logic needs to move into
+MCP, and no MCP server is implemented.
 
-The service deliberately has no trading routes, generic SDK dispatcher, order creation,
-modification or cancellation methods. MCP transport, persistent caching, a lifetime execution
-ledger and cash-flow-based performance metrics remain outside this version.
+The service has no trading routes, generic SDK dispatcher, order creation, modification or
+cancellation methods. Historical imports, persistent records and dated performance are available
+with the coverage limits documented above. MCP transport remains outside this version.

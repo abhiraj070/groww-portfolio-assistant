@@ -7,10 +7,17 @@ from pydantic import ValidationError
 from app.core.config import Settings
 from app.core.exceptions import ServiceError
 from app.services.analytics_service import SectorMetadata
+from app.services.equity_history_service import EquityHistoryService
 from app.services.groww_client import GrowwClient
+from app.services.history_service import HistoryService
 from app.services.holdings_service import HoldingsService
+from app.services.instruments_service import InstrumentsService
+from app.services.investment_service import InvestmentService
+from app.services.ledger_service import LedgerService
 from app.services.market_data_service import MarketDataService
+from app.services.mf_service import MFService
 from app.services.orders_service import OrdersService
+from app.services.performance_service import PerformanceService
 from app.services.portfolio_service import PortfolioService
 from app.services.positions_service import PositionsService
 
@@ -23,6 +30,18 @@ class Services:
     orders: OrdersService
     market: MarketDataService
     portfolio: PortfolioService
+    ledger: LedgerService | None = None
+    equity_history: EquityHistoryService | None = None
+    instruments: InstrumentsService | None = None
+    mf: MFService | None = None
+    investment: InvestmentService | None = None
+    performance: PerformanceService | None = None
+    history: HistoryService | None = None
+
+    def close(self):
+        self.client.close()
+        if self.instruments is not None:
+            self.instruments.close()
 
     @classmethod
     def build(cls, settings: Settings):
@@ -44,4 +63,21 @@ class Services:
         portfolio = PortfolioService(
             holdings, positions, market, settings.valuation_exchange, sectors
         )
-        return cls(client, holdings, positions, orders, market, portfolio)
+        ledger = LedgerService(settings.ledger_path)
+        mf = MFService(ledger)
+        history = EquityHistoryService(ledger)
+        return cls(
+            client,
+            holdings,
+            positions,
+            orders,
+            market,
+            portfolio,
+            ledger,
+            history,
+            InstrumentsService(settings.groww_request_timeout_seconds),
+            mf,
+            InvestmentService(portfolio, mf, history, ledger),
+            PerformanceService(ledger),
+            HistoryService(ledger, portfolio, mf),
+        )

@@ -9,6 +9,7 @@ from app.schemas.holdings import NonNegative
 
 class HoldingValuation(BaseModel):
     trading_symbol: str
+    name: str | None = None
     isin: str
     quantity: NonNegative
     average_price: NonNegative | None

@@ -20,3 +20,12 @@ Thumbs.db
 # Private optional sector classifications
 sector-metadata.json
 sectors.json
+
+# Private investment imports and local persistent ledger
+data/
+*.sqlite*
+*.db
+*.db-*
+imports/
+statements/
+contract-notes/

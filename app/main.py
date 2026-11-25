@@ -7,10 +7,11 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
-from app.api.routes import market_data, portfolio
+from app.api.routes import investment_analytics, market_data, mutual_funds, portfolio, stocks
 from app.core.config import get_settings
 from app.core.exceptions import ServiceError
 from app.core.logging import configure_secret_redaction
+from app.core.request_budget import RequestBudget
 from app.core.security import require_api_key
 from app.schemas.common import ErrorDetail, ErrorResponse, HealthResponse
 from app.services.container import Services
@@ -26,10 +27,11 @@ async def lifespan(application: FastAPI):
     settings = get_settings()
     configure_secret_redaction(settings)
     application.state.services = Services.build(settings)
+    application.state.request_budget = RequestBudget(settings.api_requests_per_minute)
     try:
         yield
     finally:
-        application.state.services.client.close()
+        application.state.services.close()
 
 
 def create_app() -> FastAPI:
@@ -46,11 +48,21 @@ def create_app() -> FastAPI:
     private = APIRouter(prefix="/api/v1", dependencies=[Depends(require_api_key)])
     private.include_router(portfolio.router)
     private.include_router(market_data.router)
+    private.include_router(stocks.router)
+    private.include_router(mutual_funds.router)
+    private.include_router(investment_analytics.router)
     application.include_router(private)
 
     @application.middleware("http")
     async def privacy_headers(request: Request, call_next):
-        response = await call_next(request)
+        try:
+            if request.url.path.startswith("/api/v1/"):
+                request.app.state.request_budget.acquire()
+        except ServiceError as exc:
+            response = error_response(exc.status, exc.code, exc.message)
+            response.headers["Retry-After"] = str(exc.retry_after)
+        else:
+            response = await call_next(request)
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
         return response

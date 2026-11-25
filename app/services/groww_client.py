@@ -263,6 +263,26 @@ class GrowwClient:
             "live",
         )
 
+    def get_order_detail(self, order_id: str, segment: str) -> dict:
+        return self._read(
+            lambda: self._sdk.get_order_detail(
+                groww_order_id=order_id,
+                segment=segment,
+                timeout=self.settings.groww_request_timeout_seconds,
+            )
+        )
+
+    def get_order_trades(self, order_id: str, segment: str, page: int, page_size: int) -> dict:
+        return self._read(
+            lambda: self._sdk.get_trade_list_for_order(
+                groww_order_id=order_id,
+                segment=segment,
+                page=page,
+                page_size=page_size,
+                timeout=self.settings.groww_request_timeout_seconds,
+            )
+        )
+
     def get_ltp(self, symbols: tuple[str, ...], segment: str) -> dict:
         return self._read(
             lambda: self._sdk.get_ltp(

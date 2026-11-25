@@ -10,6 +10,8 @@ def isolated_settings(monkeypatch, tmp_path):
         "SERVICE_API_KEY",
         "VALUATION_EXCHANGE",
         "SECTOR_METADATA_FILE",
+        "LEDGER_PATH",
+        "API_REQUESTS_PER_MINUTE",
         "GROWW_AUTH_METHOD",
         "GROWW_API_KEY",
         "GROWW_API_SECRET",
