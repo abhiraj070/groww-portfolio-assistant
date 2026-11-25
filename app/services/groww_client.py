@@ -195,3 +195,78 @@ class GrowwClient:
         return self._read(
             lambda: self._sdk.get_user_profile(timeout=self.settings.groww_request_timeout_seconds)
         )
+
+    def get_orders(self, page: int, page_size: int, segment: str | None = None) -> dict:
+        def fetch():
+            # SDK 1.5.0 drops page_size and page without segment. Audited HTTP fallback.
+            params = {"page": page, "page_size": page_size}
+            if segment is not None:
+                params["segment"] = segment
+            response = self._http.get(
+                "https://api.groww.in/v1/order/list",
+                params=params,
+                headers={"Authorization": f"Bearer {self._token}", "x-api-version": "1.0"},
+                timeout=self.settings.groww_request_timeout_seconds,
+            )
+            response.raise_for_status()
+            body = response.json()
+            if not isinstance(body, dict):
+                raise invalid_response()
+            if body.get("status") == "FAILURE":
+                error = body.get("error", {})
+                raise GrowwAPIException("Groww request failed", str(error.get("code", "")))
+            return body.get("payload", body)
+
+        return self._read(fetch)
+
+    def get_quote(self, symbol: str, exchange: str, segment: str) -> dict:
+        return self._read(
+            lambda: self._sdk.get_quote(
+                trading_symbol=symbol,
+                exchange=exchange,
+                segment=segment,
+                timeout=self.settings.groww_request_timeout_seconds,
+            ),
+            "live",
+        )
+
+    def get_ltp(self, symbols: tuple[str, ...], segment: str) -> dict:
+        return self._read(
+            lambda: self._sdk.get_ltp(
+                exchange_trading_symbols=symbols,
+                segment=segment,
+                timeout=self.settings.groww_request_timeout_seconds,
+            ),
+            "live",
+        )
+
+    def get_ohlc(self, symbols: tuple[str, ...], segment: str) -> dict:
+        return self._read(
+            lambda: self._sdk.get_ohlc(
+                exchange_trading_symbols=symbols,
+                segment=segment,
+                timeout=self.settings.groww_request_timeout_seconds,
+            ),
+            "live",
+        )
+
+    def get_candles(
+        self,
+        exchange: str,
+        segment: str,
+        groww_symbol: str,
+        start_time: str,
+        end_time: str,
+        candle_interval: str,
+    ) -> dict:
+        return self._read(
+            lambda: self._sdk.get_historical_candles(
+                exchange=exchange,
+                segment=segment,
+                groww_symbol=groww_symbol,
+                start_time=start_time,
+                end_time=end_time,
+                candle_interval=candle_interval,
+                timeout=self.settings.groww_request_timeout_seconds,
+            )
+        )
