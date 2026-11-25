@@ -13,8 +13,8 @@ live-tested yet. No trading operations or MCP server are included.
 - For later live integration: a Groww account and an active Trading API subscription.
   See [official prerequisites and authentication](https://groww.in/trade-api/docs/python-sdk).
 
-This project has its own Git repository inside the existing NoteApp directory. Run its Git
-and uv commands from this folder. The NoteApp application and dependencies are separate.
+This project has its own Git repository. Run its Git
+and uv commands from this folder.
 
 ## Windows PowerShell setup
 
@@ -27,7 +27,7 @@ winget install --id astral-sh.uv --exact
 Open a new PowerShell session after installation:
 
 ```powershell
-Set-Location C:\Code\Projects\NoteApp\groww-portfolio-assistant
+Set-Location C:\Code\Projects\groww-portfolio-assistant
 uv python install 3.13
 uv sync --locked
 Copy-Item .env.example .env

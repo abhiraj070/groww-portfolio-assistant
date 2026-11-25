@@ -15,8 +15,7 @@ no account data and makes no upstream readiness claim. No trading capabilities e
 - `app/utils/`: future Decimal calculations.
 - `tests/`: isolated configuration and HTTP tests; no live credentials.
 
-Dependencies are locked with uv. The independent nested Git repository can be moved outside
-NoteApp later without changing the application. Do not add it as a gitlink in the parent repo.
+Dependencies are locked with uv. The project has an independent Git repository at C:\Code\Projects\groww-portfolio-assistant.
 
 ## Integration design for subsequent phases
 
