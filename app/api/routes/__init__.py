@@ -1,1 +1,1 @@
-"""Portfolio and market route modules will be added in Phase 6."""
+"""Thin protected portfolio and market-data HTTP adapters."""

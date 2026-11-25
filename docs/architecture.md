@@ -1,44 +1,92 @@
 # Architecture
 
-## Phase 1 boundary
+## Boundaries
 
-The only production route is `/health`. Startup loads and validates environment settings
-without creating an SDK client or contacting Groww. The public liveness response contains
-no account data and makes no upstream readiness claim. No trading capabilities exist.
+FastAPI routes -> reusable services -> read-only GrowwClient -> official Groww SDK or the
+narrow HTTPX order-list fallback. Analytics performs Decimal calculations over validated
+holdings, positions and prices. Service modules do not import FastAPI.
 
-- `app/main.py`: application factory, liveness, sanitised error responses.
-- `app/core/config.py`: cached Pydantic Settings, masked secrets, bounded timeout configuration.
-- `app/core/security.py`: reusable constant-time local API-key check, failing closed.
-- `app/schemas/common.py`: explicit health and error response models.
-- `app/api/routes/`: future thin HTTP adapters with router-level API-key enforcement.
-- `app/services/`: future authentication, SDK reads, portfolio orchestration, and analytics.
-- `app/utils/`: future Decimal calculations.
-- `tests/`: isolated configuration and HTTP tests; no live credentials.
+- `app/main.py`: application factory, lifecycle ownership, authentication at the private router,
+  sanitised error responses, and no-store headers.
+- `app/__main__.py`: loopback-only server entry point, one worker, no access logging.
+- `app/core/config.py`: cached environment settings and masked credentials.
+- `app/core/security.py`: constant-time local API-key comparison and fail-closed configuration.
+- `app/core/logging.py`: known-secret and Bearer-token redaction after traceback formatting.
+- `app/api/routes/`: thin, synchronous routes; FastAPI runs blocking work in its thread pool.
+- `app/services/groww_client.py`: lazy SDK authentication, serialized token refresh, read calls,
+  bounded network timeouts, error translation, and shared category budgets.
+- `app/services/container.py`: application-scoped service ownership and optional sector loading.
+- `app/services/*_service.py`: response validation, portfolio orchestration, and pure analytics.
+- `app/schemas/`: typed requests/responses; provider extras are retained on account-data models.
+- `app/utils/calculations.py`: Decimal percentage calculation and explicit rounding.
 
-Dependencies are locked with uv. The project has an independent Git repository at C:\Code\Projects\groww-portfolio-assistant.
+Startup loads settings and optional metadata, creates services, and performs no Groww requests.
+Shutdown closes the owned HTTPX client and drops token/SDK references. Health is process liveness,
+not credential or subscription readiness. Documentation routes are disabled.
 
-## Integration design for subsequent phases
+## Authentication, transport and errors
 
-GrowwClient will own authentication and SDK initialization, reuse tokens, and expose only
-explicit read methods. No generic method dispatcher, order placement, modification, or
-cancellation will be exposed. Verify each method and signature against official documentation
-and the locked SDK before implementing it. Synchronous SDK work must run off the async event
-loop. Bound actual network timeouts; worker cancellation alone does not stop a network call.
+The local API key and Groww credentials have separate roles. All `/api/v1` routes require the
+local key. Groww auth is lazy; one client and reentrant lock serialize upstream reads and refresh.
+A 401 triggers one token refresh and one retry. Auth failures cool down for 60 seconds. No
+transient-failure retry loop amplifies requests; callers receive stable status codes instead.
 
-Service objects must remain usable without FastAPI dependencies so MCP adapters can call
-them later. Routers validate inputs, call services, and return typed models. Upstream errors
-must be translated to stable, sanitised error codes; never return raw SDK exception strings.
-Retry only safe reads with bounded attempts and respect provider rate limits.
+The locked SDK 1.5.0 is used for auth, holdings, positions, profiles, quotes, LTP, OHLC and
+historical candles. Its changelog hook is suppressed because constructor initialization would
+otherwise make an unrelated network call without a timeout. Its fixed safe greeting may still
+appear; no credentials are printed. Order-list pagination uses the documented HTTP endpoint
+because the installed SDK drops required pagination parameters; see SDK compatibility notes.
 
-Portfolio valuation will cover holdings separately from positions, preserving quantity
-semantics to avoid double counting. Missing prices produce incomplete valuation metadata,
-not invented zeros. Realised P&L must state its data scope and period; daily positions do
-not establish lifetime realised returns. Sector classification requires reliable metadata.
-All financial calculations should use Decimal and make rounding policies explicit.
+The SDK adapter checks HTTP status before parsing failure bodies so provider business codes
+cannot hide a 401, and non-JSON downtime is reported as an availability error.
+SDK reads pass an explicit timeout. SDK auth has a fixed 15-second timeout. HTTPX uses explicit
+timeouts, disables redirect following and environment proxy inheritance. Requests timeouts bound
+network inactivity, not an overall transaction wall clock. Shared client locking includes waits
+for in-flight requests, so concurrent requests may queue. This is a personal, low-volume service.
 
-## Verification scope
+Budgets mirror documented auth/read/live limits, including 150 auth calls per rolling day.
+They are process-local, reset on restart, and do not coordinate with other apps using the account.
+Run one worker. Provider 429s produce Retry-After and a local cooldown; HTTPX preserves a valid
+provider Retry-After, while SDK errors lacking headers use 60 seconds. Missing resources, auth,
+timeouts, unavailable upstream and unexpected shapes are translated without raw error messages.
 
-Phase 1 tests verify config isolation, secret masking, environment precedence, timeout and
-auth-mode validation, local API-key enforcement, liveness, and error sanitisation. They do
-not validate Groww connectivity. Live verification requires the user's subscription and
-local credentials after the client has been implemented.
+## Financial semantics
+
+Holdings quantity is the valuation quantity. Pledged/locked/free/T1 quantities are retained as
+metadata and are not added to it. Duplicate ISIN or symbol rows are rejected. Position identity
+includes exchange, segment, product and trading symbol; duplicate identities are rejected.
+
+Holdings market value uses CASH LTP on the explicit configured exchange. The service does not
+infer exchange-specific aliases from ISIN; verify the default NSE assumption for your portfolio.
+LTP is retrieved in batches of at most 50 symbols. Retrieval time is distinct from last-trade time.
+
+Money and quantity calculations use Decimal after SDK deserialization. Monetary totals retain
+precision; percentages round to four decimal places with ROUND_HALF_UP. HHI uses unrounded
+weights on a 0-to-1 scale. The default Decimal precision is 28 digits. JSON Decimal fields are
+strings; clients should parse them as decimals rather than binary floating point.
+
+Positions are reported separately and never added to holdings value. Realised P&L is the sum
+of values reported in the current positions snapshot; it does not establish lifetime realised
+returns. Missing position P&L produces a null aggregate and a separately labelled reported sum.
+Missing price/cost data produces null dependent totals and explicit known subtotals. No market
+prices, sector labels or lifetime financial history are fabricated.
+
+## Security and extension
+
+Secrets live in local environment variables or ignored `.env`. The service registers configured
+secrets and generated tokens for log redaction. Raw settings, HTTP headers/bodies, account data,
+and unfiltered SDK exceptions must never be logged. Redaction is a backstop, not permission to
+emit sensitive data. Response caches are disabled. CORS and unauthenticated interactive docs are
+not enabled. This version assumes trusted local users; remote/multiuser deployment is separate work.
+
+Future MCP adapters can construct the same Services container and call business services, then
+close its client when shutting down. MCP must apply its own caller authorization. No generic SDK
+method dispatcher or trading write path is exposed. New SDK versions require compatibility review
+before updating the exact pin and lockfile.
+
+## Validation
+
+Unit and API tests use synthetic fixtures; outbound Requests and HTTPX transports are blocked
+unless explicitly mocked. Contract tests execute actual SDK methods against mocked HTTP and
+exercise the full FastAPI-to-service-to-SDK path. Local socket smoke checks cover health/auth.
+These checks do not certify Groww subscription, credentials, permissions or live payloads.

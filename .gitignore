@@ -16,3 +16,7 @@ build/
 .vscode/
 Thumbs.db
 .DS_Store
+
+# Private optional sector classifications
+sector-metadata.json
+sectors.json

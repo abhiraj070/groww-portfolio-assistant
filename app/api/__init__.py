@@ -1,1 +1,1 @@
-"""HTTP adapters; future private routes must use require_api_key."""
+"""HTTP adapters protected by router-level local API-key authentication."""
