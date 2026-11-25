@@ -1,0 +1,1 @@
+"""Groww portfolio assistant backend."""
