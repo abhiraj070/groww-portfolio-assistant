@@ -60,7 +60,7 @@ class InstrumentsService:
                     content = bytearray()
                     with self.http.stream("GET", CATALOG_URL, timeout=self.timeout) as response:
                         response.raise_for_status()
-                        for chunk in response.iter_bytes():
+                        for chunk in response.iter_bytes(chunk_size=65536):
                             content.extend(chunk)
                             if len(content) > MAX_CATALOG_BYTES:
                                 raise invalid_response()

@@ -3,7 +3,7 @@
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
-from decimal import Decimal
+from decimal import Decimal, localcontext
 
 from app.core.exceptions import ServiceError
 from app.schemas.history import MFUnitAdjustment
@@ -111,6 +111,11 @@ class MFService:
         )
 
     def portfolio(self) -> MFPortfolioResponse:
+        with localcontext() as context:
+            context.prec = 64
+            return self._portfolio()
+
+    def _portfolio(self) -> MFPortfolioResponse:
         transactions = self.all_transactions()
         grouped = defaultdict(list)
         for row in transactions:

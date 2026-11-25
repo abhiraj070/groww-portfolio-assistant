@@ -1,6 +1,6 @@
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
-from decimal import Decimal
+from decimal import Decimal, localcontext
 from unittest.mock import Mock
 
 import pytest
@@ -185,14 +185,18 @@ def test_repeated_partial_sales_conserve_lot_costs_and_charges(tmp_path):
     ]
     ledger.import_csv(csv_bytes(*equity), "synthetic")
     stock = EquityHistoryService(ledger).analyse().stocks[0]
-    assert sum(m.charges for m in stock.matches) == 1
+    with localcontext() as context:
+        context.prec = 64
+        assert sum(m.charges for m in stock.matches) == 1
     assert stock.remaining_cost == 0
     mf = [mf_row(units="3", amount="100", charges="1")]
     mf += [mf_row(f"SELL-{i}", "REDEMPTION", "1", "50", f"2026-01-0{i}", "0") for i in range(1, 4)]
     MFIngestionService(ledger).import_transactions(csv_bytes(*mf), "synthetic")
     result = MFService(ledger).portfolio()
-    assert sum(m.cost for m in result.matches) == 100
-    assert sum(m.charges for m in result.matches) == 1
+    with localcontext() as context:
+        context.prec = 64
+        assert sum(m.cost for m in result.matches) == 100
+        assert sum(m.charges for m in result.matches) == 1
     assert result.invested_amount == 0
 
 

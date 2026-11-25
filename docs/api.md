@@ -191,6 +191,7 @@ credentials, validation inputs and tracebacks are not returned.
 | 503 / `groww_not_configured` | Configure the selected Groww credential flow locally |
 | 503 / `groww_authentication_failed` | Check Groww credentials, daily approval, clock and subscription |
 | 429 / `rate_limited` | Respect Retry-After; shared category/provider budget is exhausted |
+| 429 / `request_rate_limited` | Local inbound budget exhausted; respect Retry-After |
 | 504 / `upstream_timeout` | Groww timed out; retry the safe read later |
 | 503 / `upstream_unavailable` | Upstream unavailable; retry later |
 | 404 / `instrument_not_found` | Check symbol, exchange and access |

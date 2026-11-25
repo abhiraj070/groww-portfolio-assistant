@@ -7,11 +7,13 @@ from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.schemas.holdings import NonNegative
 from app.schemas.market_data import Symbol
 
 Identifier = Annotated[str, Field(pattern=r"^[A-Za-z0-9_-]{1,100}$")]
 Positive = Annotated[Decimal, Field(gt=0, allow_inf_nan=False, max_digits=24, decimal_places=10)]
+ImportAmount = Annotated[
+    Decimal, Field(ge=0, allow_inf_nan=False, max_digits=24, decimal_places=10)
+]
 
 
 class EquityTransaction(BaseModel):
@@ -25,8 +27,8 @@ class EquityTransaction(BaseModel):
     side: Literal["BUY", "SELL"]
     traded_at: datetime
     quantity: Positive
-    price: NonNegative
-    charges: NonNegative | None = None
+    price: ImportAmount
+    charges: ImportAmount | None = None
 
     @field_validator("traded_at")
     @classmethod

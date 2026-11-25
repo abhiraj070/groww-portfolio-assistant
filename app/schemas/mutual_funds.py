@@ -7,8 +7,7 @@ from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.schemas.equity_history import Identifier, Positive
-from app.schemas.holdings import NonNegative
+from app.schemas.equity_history import Identifier, ImportAmount, Positive
 
 SchemeCode = Annotated[str, Field(pattern=r"^[0-9]{1,12}$")]
 MFKind = Literal[
@@ -26,10 +25,10 @@ class MFTransaction(BaseModel):
     fund_house: str | None = Field(default=None, max_length=200)
     kind: MFKind
     date: date
-    units: NonNegative
-    nav: NonNegative | None = None
-    amount: NonNegative
-    charges: NonNegative | None = None
+    units: ImportAmount
+    nav: ImportAmount | None = None
+    amount: ImportAmount
+    charges: ImportAmount | None = None
     sip_id: Identifier | None = None
     switch_id: Identifier | None = None
 

@@ -3,7 +3,7 @@
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, localcontext
 
 from app.core.exceptions import ServiceError
 from app.schemas.equity_history import EquityHistoryResponse, SaleMatch, StockHistory
@@ -27,6 +27,11 @@ class EquityHistoryService:
         self.ledger = ledger
 
     def analyse(self, sold_only: bool = False) -> EquityHistoryResponse:
+        with localcontext() as context:
+            context.prec = 64
+            return self._analyse(sold_only)
+
+    def _analyse(self, sold_only: bool) -> EquityHistoryResponse:
         grouped = defaultdict(list)
         for transaction in self.ledger.all_transactions():
             grouped[transaction.isin].append(transaction)

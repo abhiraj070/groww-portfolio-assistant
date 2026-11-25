@@ -5,8 +5,7 @@ from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.schemas.equity_history import Identifier, Positive, SaleMatch
-from app.schemas.holdings import NonNegative
+from app.schemas.equity_history import Identifier, ImportAmount, Positive, SaleMatch
 from app.schemas.mutual_funds import MFSaleMatch
 from app.schemas.portfolio import SectorAllocation
 
@@ -31,9 +30,9 @@ class CashFlow(BaseModel):
 class PortfolioObservation(BaseModel):
     model_config = ConfigDict(extra="forbid")
     date: date
-    equity_value: NonNegative
-    mf_value: NonNegative
-    cash_value: NonNegative
+    equity_value: ImportAmount
+    mf_value: ImportAmount
+    cash_value: ImportAmount
     cashflows_complete_from: date | None = None
 
     _not_future = field_validator("date")(CashFlow.not_future.__func__)

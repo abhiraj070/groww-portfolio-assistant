@@ -11,6 +11,7 @@ from app.api.routes import investment_analytics, market_data, mutual_funds, port
 from app.core.config import get_settings
 from app.core.exceptions import ServiceError
 from app.core.logging import configure_secret_redaction
+from app.core.request_budget import RequestBudget
 from app.core.security import require_api_key
 from app.schemas.common import ErrorDetail, ErrorResponse, HealthResponse
 from app.services.container import Services
@@ -26,6 +27,7 @@ async def lifespan(application: FastAPI):
     settings = get_settings()
     configure_secret_redaction(settings)
     application.state.services = Services.build(settings)
+    application.state.request_budget = RequestBudget(settings.api_requests_per_minute)
     try:
         yield
     finally:
@@ -53,7 +55,14 @@ def create_app() -> FastAPI:
 
     @application.middleware("http")
     async def privacy_headers(request: Request, call_next):
-        response = await call_next(request)
+        try:
+            if request.url.path.startswith("/api/v1/"):
+                request.app.state.request_budget.acquire()
+        except ServiceError as exc:
+            response = error_response(exc.status, exc.code, exc.message)
+            response.headers["Retry-After"] = str(exc.retry_after)
+        else:
+            response = await call_next(request)
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
         return response

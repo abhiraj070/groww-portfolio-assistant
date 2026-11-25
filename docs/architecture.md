@@ -11,7 +11,7 @@ for order details, per-order executions, catalog and ledger analytics. `LedgerSe
 local SQLite connections per operation, transactionally imports canonical delivery executions,
 preserves original files/rows and stores Decimal JSON strings. It opens lazily (not on startup).
 Schema version 1 introduces imports and equity transactions; no extra DB server is necessary
-for this single-account local service. SQLAlchemy/PostgreSQL is evaluated in Phase 4.
+for this single-account local service. The [storage evaluation](storage.md) retains SQLite.
 `EquityHistoryService` recalculates FIFO from the ledger, with incomplete-history and unknown
 charge propagation. No business service imports FastAPI. CLI ingestion never calls Groww.
 `InstrumentsService` reads the official public catalog with bounded HTTPX streaming, a timeout,
@@ -89,7 +89,9 @@ LTP is retrieved in batches of at most 50 symbols. Retrieval time is distinct fr
 
 Money and quantity calculations use Decimal after SDK deserialization. Monetary totals retain
 precision; percentages round to four decimal places with ROUND_HALF_UP. HHI uses unrounded
-weights on a 0-to-1 scale. The default Decimal precision is 28 digits. JSON Decimal fields are
+weights on a 0-to-1 scale. Legacy valuation uses the default 28-digit Decimal context;
+imported FIFO uses 64 digits, and percentage calculations use at least 64 working digits.
+JSON Decimal fields are
 strings; clients should parse them as decimals rather than binary floating point.
 
 Positions are reported separately and never added to holdings value. Realised P&L is the sum

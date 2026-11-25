@@ -121,6 +121,8 @@ Environment variables override `.env`, which is read from the working directory.
 | `GROWW_REQUEST_TIMEOUT_SECONDS` | SDK read and HTTPX timeout; default 10, greater than 0 and at most 60 |
 | `VALUATION_EXCHANGE` | `NSE` (default) or `BSE`; verify that holdings trade under these symbols there |
 | `SECTOR_METADATA_FILE` | Optional path to operator-verified classification JSON; leave unset otherwise |
+| `LEDGER_PATH` | Private local SQLite ledger; default data/investments.sqlite3 |
+| `API_REQUESTS_PER_MINUTE` | Process-wide inbound budget; default 300 per rolling minute |
 
 Groww credentials can be absent while checking process health. Private reads then return
 `groww_not_configured`, never a fake successful portfolio. If a configured sector file is missing,
@@ -176,6 +178,7 @@ All paths below require `X-API-Key` except `/health`. Financial Decimal values a
 
 See [API semantics and errors](docs/api.md) for query parameters, completeness rules and error
 codes, and [SDK compatibility](docs/sdk-compatibility.md) for verified methods and exceptions.
+See [security and reliability](docs/security.md) for inbound limits, import bounds and privacy.
 
 ## Optional sector classifications
 
@@ -227,6 +230,6 @@ Future MCP tools can map `get_portfolio_summary` and `get_portfolio_analytics` t
 `get_holdings` and `get_positions` to their services, `get_orders` to OrdersService, and
 `get_stock_quote` to MarketDataService. No business logic needs to move into MCP.
 
-The service deliberately has no trading routes, generic SDK dispatcher, order creation,
-modification or cancellation methods. MCP transport, persistent caching, a lifetime execution
-ledger and cash-flow-based performance metrics remain outside this version.
+The service has no trading routes, generic SDK dispatcher, order creation, modification or
+cancellation methods. Historical imports, persistent records and dated performance are available
+with the coverage limits documented above. MCP transport remains outside this version.
