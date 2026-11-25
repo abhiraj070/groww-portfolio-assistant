@@ -17,6 +17,10 @@ The mutual-fund module under `/api/v1/mf` reads normalized statements and import
 observations: holdings, purchases, SIP history, redemptions, dividends and FIFO gains.
 See [MF ingestion and metric limitations](docs/mutual-funds.md).
 
+Combined reads under `/api/v1/analytics` cover investment value, asset exposure, imported gains
+and snapshot/cash-flow-based performance. [Metric assumptions and input formats](docs/performance.md)
+explain when XIRR, CAGR and historical returns are available.
+
 - Fetch holdings, positions, account profile, and paginated orders for the current trading day.
 - Retrieve LTP, quotes, current OHLC snapshots, and historical candles.
 - Calculate holdings cost, market value, unrealised P&L, simple absolute and percentage returns.

@@ -61,6 +61,23 @@ Scheme IDs are numeric strings of 1..12 digits. Offset 0..1000000 (default 0), l
 No NAV history is synthesized between dates. Purchase reads include switch-ins/reinvestments;
 redemptions include switch-outs; dividends include reinvestment income (avoid duplicate rows).
 
+## Combined analytics namespace
+
+Protected GETs under `/api/v1/analytics`; see [performance and financial definitions](performance.md).
+
+| Path | Response model / query |
+| --- | --- |
+| `/net-worth`, `/total-investment`, `/unrealised-gains`, `/asset-allocation` | CombinedPortfolio: value, remaining cost, unrealised P&L/return, asset_allocation, scope, retrieved_at, warnings |
+| `/realised-gains` | RealisedGains: module gross/net gains, totals, MF income, known/unknown costs and imported coverage |
+| `/performance`, `/total-returns` | PerformanceResponse: period, boundary dates/values, net_contributions, absolute/percentage returns, CAGR/XIRR percentages, coverage, available, warnings |
+| `/risk` | RiskResponse: combined holdings, top five, rankings, HHI, effective holdings, unavailable volatility and warnings |
+| `/sector-exposure` | Equity sector allocations with metadata source/date, unclassified value and equity_only scope |
+| `/tax-report` | Imported matched equity_lots/mf_lots, coverage warnings; optional inclusive start/end disposal dates |
+
+Performance query: period=daily|weekly|monthly|quarterly|yearly|all_time (default all_time),
+optional ISO start/end. Invalid/inverted ranges are 422. Missing boundary snapshots return
+available=false with explicit warnings and null metrics, not fabricated observations.
+
 ## Access and response format
 
 Base URL: `http://127.0.0.1:8000`. All `/api/v1` routes require `X-API-Key`.

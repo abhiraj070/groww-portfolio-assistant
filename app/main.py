@@ -7,7 +7,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
-from app.api.routes import market_data, mutual_funds, portfolio, stocks
+from app.api.routes import investment_analytics, market_data, mutual_funds, portfolio, stocks
 from app.core.config import get_settings
 from app.core.exceptions import ServiceError
 from app.core.logging import configure_secret_redaction
@@ -48,6 +48,7 @@ def create_app() -> FastAPI:
     private.include_router(market_data.router)
     private.include_router(stocks.router)
     private.include_router(mutual_funds.router)
+    private.include_router(investment_analytics.router)
     application.include_router(private)
 
     @application.middleware("http")

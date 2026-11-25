@@ -70,6 +70,11 @@ timeouts, unavailable upstream and unexpected shapes are translated without raw 
 
 ## Financial semantics
 
+InvestmentService consumes equity and MF service outputs; PerformanceService consumes dated
+cash flows and portfolio observations. Both use LedgerService without FastAPI dependencies.
+`app/utils/returns.py` provides Decimal dated XIRR/CAGR functions. Historical inputs are never
+silently mixed with live current values. See [performance assumptions](performance.md).
+
 Holdings quantity is the valuation quantity. Pledged/locked/free/T1 quantities are retained as
 metadata and are not added to it. Duplicate ISIN or symbol rows are rejected. Position identity
 includes exchange, segment, product and trading symbol; duplicate identities are rejected.
