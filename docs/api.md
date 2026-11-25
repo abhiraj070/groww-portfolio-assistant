@@ -1,5 +1,9 @@
 # API reference and financial semantics
 
+Every endpoint is also exposed as a separate [MCP stdio tool](mcp.md), including aliases and
+health. Tool arguments preserve endpoint constraints; successful MCP payloads wrap the HTTP
+response under `data`. REST routes, authentication and financial semantics remain unchanged.
+
 ## Equity namespace
 
 Legacy `/portfolio` and `/market` routes retain their behavior. New protected reads:

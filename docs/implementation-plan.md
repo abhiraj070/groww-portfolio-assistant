@@ -4,6 +4,9 @@ Audit date: 2026-11-25. Baseline: `18ed56b`, clean `main` checkout.
 
 ## Delivery status
 
+Subsequent user-authorized extension: a [local MCP server](mcp.md) now exposes every endpoint
+as an individual read-only tool. The original Phase 6 delivery below was the service facade.
+
 Implemented sequentially on six phase branches, with tests, documentation and separate
 milestone commits/pushes. Branches are stacked: later phases contain earlier phases.
 Main remains unchanged; nothing is deployed automatically.

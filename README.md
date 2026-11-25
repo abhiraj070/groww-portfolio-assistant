@@ -5,7 +5,8 @@ portfolio. The expanded backend was implemented in six
 [ordered phases](docs/implementation-plan.md), with explicit source and coverage limits.
 Live account connectivity has **not**
 been verified: tests use synthetic data and mocked upstream HTTP, including tests of the real
-installed SDK. No credentials are bundled, and no trading or MCP server is implemented.
+installed SDK. No credentials are bundled, and no trading capabilities are implemented.
+A [local stdio MCP server](docs/mcp.md) exposes every endpoint as a separate read-only tool.
 
 ## Capabilities
 
@@ -229,8 +230,9 @@ committing; never stage `.env` or force-push.
 
 See [architecture](docs/architecture.md) and the [typed read facade](docs/ai-readiness.md).
 FastAPI and future AI adapters share service objects. No financial logic needs to move into
-MCP, and no MCP server is implemented.
+MCP. The [MCP server](docs/mcp.md) reuses the authenticated API boundary in-process.
 
 The service has no trading routes, generic SDK dispatcher, order creation, modification or
 cancellation methods. Historical imports, persistent records and dated performance are available
-with the coverage limits documented above. MCP transport remains outside this version.
+with the coverage limits documented above. Run `uv run --locked python -m app.mcp_server`
+from a stdio MCP client; see its [57-tool endpoint mapping and setup](docs/mcp.md).

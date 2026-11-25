@@ -1,8 +1,9 @@
 # Reusable reads for future AI adapters
 
 `app/services/read_tools.py` defines ReadTools, a typed facade over the services used by
-FastAPI. No MCP server, generic dispatcher, trading method, import tool or snapshot-write
-tool is implemented. Business services do not depend on FastAPI/MCP. Sector composition
+FastAPI. The [MCP stdio server](mcp.md) now exposes all endpoint reads through the existing
+API boundary. No generic SDK dispatcher, trading method, import tool or snapshot-write tool
+is exposed. Business services do not depend on FastAPI/MCP. Sector composition
 lives in InvestmentService, shared by HTTP and the facade.
 
 | Future tool | Existing service / returned model |

@@ -1,5 +1,14 @@
 # Architecture
 
+## MCP transport
+
+`app/mcp_server.py` implements local stdio using official MCP SDK 2.3.0. A reviewed explicit
+catalog maps each GET endpoint to its own tool; input/output schemas come from internal
+OpenAPI generation without enabling public docs. Calls forward through HTTPX ASGI transport
+to the same FastAPI application/lifespan, preserving authentication, limits and financial
+serialization. No network listener, arbitrary URL dispatcher or duplicate financial logic.
+Business services remain transport-independent. See [MCP lifecycle and tool mapping](mcp.md).
+
 ## Expanded equity module
 
 The ledger now has [ordered transactional migrations](storage.md), captured holding snapshots

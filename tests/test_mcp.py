@@ -12,6 +12,7 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.shared.memory import create_client_server_memory_streams
 
 from app.api.dependencies import get_services
+from app.core.exceptions import ServiceError
 from app.main import create_app
 from app.mcp_catalog import ENDPOINTS, build_catalog
 from app.mcp_server import MCPBridge, create_mcp_server
@@ -46,6 +47,15 @@ def test_no_unreviewed_routes_automatically_become_tools():
         return {}
 
     assert all(s.path != "/api/v1/future-route" for s in build_catalog(app.openapi()).values())
+
+
+def test_documented_tool_mapping_matches_the_live_catalog():
+    root = Path(__file__).resolve().parents[1]
+    documented = (root / "docs" / "mcp.md").read_text(encoding="utf-8")
+    mapping = re.findall(r"\| `([^`]+)` \| `([^`]+)` \|", documented)
+    assert dict(mapping) == {
+        name: spec.path for name, spec in build_catalog(create_app().openapi()).items()
+    }
 
 
 def example_arguments(spec):
@@ -201,6 +211,35 @@ def test_unexpected_errors_never_expose_details():
             result = await MCPBridge(create_app(), client).call("get_health", {})
             assert result.is_error
             assert "synthetic-private" not in result.model_dump_json()
+
+    anyio.run(run)
+
+
+@pytest.mark.parametrize(
+    "code,status,retry", [("upstream_timeout", 504, None), ("rate_limited", 429, 60)]
+)
+def test_provider_failures_preserved_through_tool_boundary(monkeypatch, code, status, retry):
+    monkeypatch.setenv("SERVICE_API_KEY", TEST_KEY)
+    services = Mock()
+    services.market.get_ltp.side_effect = ServiceError(
+        code, "Synthetic safe provider error", status, retry
+    )
+    app = create_app()
+    app.dependency_overrides[get_services] = lambda: services
+
+    async def run():
+        async with app.router.lifespan_context(app):
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://platform.internal"
+            ) as client:
+                result = await MCPBridge(app, client).call(
+                    "get_stocks_ltp_by_symbol", {"symbol": "SYNTH"}
+                )
+                assert result.is_error
+                assert result.structured_content["status"] == status
+                assert result.structured_content["error"]["code"] == code
+                if retry:
+                    assert result.structured_content["retry_after"] == str(retry)
 
     anyio.run(run)
 

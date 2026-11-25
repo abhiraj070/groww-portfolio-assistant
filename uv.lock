@@ -604,6 +604,7 @@ name = "groww-portfolio-assistant"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "anyio" },
     { name = "fastapi" },
     { name = "growwapi" },
     { name = "httpx" },
@@ -626,6 +627,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "anyio", specifier = ">=4.9,<5" },
     { name = "fastapi", specifier = ">=0.115,<1" },
     { name = "growwapi", specifier = "==1.5.0" },
     { name = "httpx", specifier = ">=0.28,<1" },

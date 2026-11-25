@@ -1,5 +1,10 @@
 # Groww SDK compatibility audit
 
+The [MCP adapter](mcp.md) pins official `mcp==2.3.0` separately from Groww SDK 1.5.0. Its
+stdio and in-memory protocol tests exercise initialization, all 57 tool definitions, calls,
+schemas, lifecycle and sanitized errors. No additional Groww endpoint or financial capability
+is introduced by MCP.
+
 Verified against the official documentation and installed `growwapi==1.5.0` source on
 25 November 2026. The exact SDK version is pinned because this adapter depends on audited
 behavior, not just names from examples. `uv.lock` pins all dependencies and hashes.
