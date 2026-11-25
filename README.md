@@ -6,7 +6,8 @@ portfolio. The expanded backend was implemented in six
 Live account connectivity has **not**
 been verified: tests use synthetic data and mocked upstream HTTP, including tests of the real
 installed SDK. No credentials are bundled, and no trading capabilities are implemented.
-A [local stdio MCP server](docs/mcp.md) exposes every endpoint as a separate read-only tool.
+The [MCP server](docs/mcp.md) exposes every endpoint as a separate read-only tool through local
+stdio or [authenticated Streamable HTTP on Render](docs/render.md).
 
 ## Capabilities
 

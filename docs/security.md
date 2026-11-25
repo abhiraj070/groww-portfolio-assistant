@@ -1,5 +1,11 @@
 # Security and reliability
 
+The [hosted MCP boundary](render.md) requires a separate MCP_BEARER_TOKEN on all `/mcp`
+requests, including discovery and initialization, and retains SERVICE_API_KEY internally.
+Constant-time comparison, secret masking, allowed HTTPS host/origin, bounded request bodies
+and a transport budget apply before account access. Only `/health` is public. This is private
+single-account Bearer access, not OAuth or a multiuser authorization system.
+
 All HTTP business endpoints are GET-only and share API-key authentication; only health is
 public. An OpenAPI regression checks the whole registered API. GrowwClient has no financial
 write methods, order dispatcher or transfer capability. Offline imports/snapshot capture write

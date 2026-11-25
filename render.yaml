@@ -1,0 +1,30 @@
+# Creating this Blueprint provisions a paid service/disk. No deployment is triggered by Codex.
+services:
+  - type: web
+    name: groww-portfolio-mcp
+    runtime: python
+    branch: codex/mcp-server
+    plan: starter
+    autoDeployTrigger: "off"
+    buildCommand: uv sync --locked --no-dev
+    startCommand: >-
+      uv run --locked --no-dev uvicorn app.mcp_http:create_http_app --factory
+      --host 0.0.0.0 --port $PORT --workers 1 --no-access-log
+    healthCheckPath: /health
+    envVars:
+      - key: SERVICE_API_KEY
+        generateValue: true
+      - key: MCP_BEARER_TOKEN
+        generateValue: true
+      - key: GROWW_AUTH_METHOD
+        value: api_key
+      - key: GROWW_API_KEY
+        sync: false
+      - key: GROWW_API_SECRET
+        sync: false
+      - key: LEDGER_PATH
+        value: /var/data/investments.sqlite3
+    disk:
+      name: investment-ledger
+      mountPath: /var/data
+      sizeGB: 1

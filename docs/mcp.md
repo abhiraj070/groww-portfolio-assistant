@@ -4,6 +4,9 @@ The local stdio MCP server exposes all 57 existing HTTP endpoints as separate to
 including legacy aliases and health. It uses official `mcp==2.3.0` with a reviewed GET-only
 catalog. The endpoint-to-tool table below is exhaustive.
 
+For a hosted MCP URL, use the [Render/Streamable HTTP deployment guide](render.md).
+The same tools and payload schemas are exposed through either transport.
+
 ## Run and configure a client
 
 ```powershell
@@ -45,7 +48,8 @@ The process reads existing Settings and supplies SERVICE_API_KEY internally thro
 API authentication boundary. Missing configuration fails closed for private tools; get_health
 remains liveness-only. There is no per-tool secret argument and no public MCP HTTP listener.
 Do not give an untrusted application the authority to launch this process or read its environment.
-HTTP/remote MCP transport and OAuth are outside this implementation.
+The separate hosted factory adds Streamable HTTP with Bearer authentication; OAuth is not
+implemented. See [hosted security and client compatibility](render.md).
 
 Each session owns one FastAPI lifespan and its Services/HTTP clients; startup performs no
 Groww authentication. Lazy provider reads use existing credentials, timeouts and budgets.

@@ -8,6 +8,9 @@ def isolated_settings(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     for name in (
         "SERVICE_API_KEY",
+        "MCP_BEARER_TOKEN",
+        "MCP_PUBLIC_URL",
+        "RENDER_EXTERNAL_URL",
         "VALUATION_EXCHANGE",
         "SECTOR_METADATA_FILE",
         "LEDGER_PATH",

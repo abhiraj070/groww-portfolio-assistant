@@ -30,6 +30,7 @@ class RedactingFormatter(logging.Formatter):
 def configure_secret_redaction(settings) -> None:
     for value in (
         settings.service_api_key,
+        settings.mcp_bearer_token,
         settings.groww_api_key,
         settings.groww_api_secret,
         settings.groww_totp_secret,

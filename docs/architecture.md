@@ -9,6 +9,12 @@ to the same FastAPI application/lifespan, preserving authentication, limits and 
 serialization. No network listener, arbitrary URL dispatcher or duplicate financial logic.
 Business services remain transport-independent. See [MCP lifecycle and tool mapping](mcp.md).
 
+`app/mcp_http.py` adds a hosted factory using the same MCP server, stateless Streamable HTTP
+and JSON responses. A separate Bearer token guards every MCP request before SDK parsing or
+discovery. Host/origin validation, a 1 MiB body limit, no-store headers and an inbound budget
+protect the public boundary. Render health is liveness-only. SDK lifespan owns one internal
+application/container per process; remote calls cannot access the underlying REST paths.
+
 ## Expanded equity module
 
 The ledger now has [ordered transactional migrations](storage.md), captured holding snapshots
