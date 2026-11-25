@@ -50,6 +50,11 @@ class LedgerService:
                     identity TEXT PRIMARY KEY, data TEXT NOT NULL, raw TEXT NOT NULL,
                     import_id INTEGER NOT NULL REFERENCES imports(id)
                 );
+                CREATE TABLE IF NOT EXISTS records (
+                    kind TEXT NOT NULL, identity TEXT NOT NULL, data TEXT NOT NULL,
+                    raw TEXT NOT NULL, import_id INTEGER NOT NULL REFERENCES imports(id),
+                    PRIMARY KEY(kind, identity)
+                );
             """)
             with connection:
                 yield connection
@@ -167,3 +172,66 @@ class LedgerService:
             offset=offset,
             limit=limit,
         )
+
+    def import_records(
+        self, kind: str, content: bytes, source: str, records: list[tuple[str, dict, dict]]
+    ) -> ImportResult:
+        """Persist validated domain records; callers own schema and stable identity validation."""
+        if (
+            not source.strip()
+            or len(source) > 200
+            or len(content) > MAX_IMPORT_BYTES
+            or not 0 < len(records) <= MAX_IMPORT_ROWS
+        ):
+            raise ServiceError("invalid_import", "Invalid import source, size or row count", 422)
+        now = datetime.now(UTC)
+        inserted = duplicates = 0
+        with self.connection() as db:
+            import_id = db.execute(
+                "INSERT INTO imports(source, imported_at, digest, original) VALUES (?, ?, ?, ?)",
+                (source, now.isoformat(), hashlib.sha256(content).hexdigest(), content),
+            ).lastrowid
+            for identity, data, raw in records:
+                encoded = json.dumps(data, sort_keys=True)
+                existing = db.execute(
+                    "SELECT data FROM records WHERE kind=? AND identity=?", (kind, identity)
+                ).fetchone()
+                if existing:
+                    if json.loads(existing["data"]) != data:
+                        raise ServiceError(
+                            "import_conflict",
+                            "Conflicting imported record; import rolled back",
+                            409,
+                        )
+                    duplicates += 1
+                else:
+                    db.execute(
+                        "INSERT INTO records VALUES (?, ?, ?, ?, ?)",
+                        (kind, identity, encoded, json.dumps(raw), import_id),
+                    )
+                    inserted += 1
+        return ImportResult(
+            import_id=import_id,
+            inserted=inserted,
+            duplicates=duplicates,
+            source=source,
+            imported_at=now,
+        )
+
+    def records(self, kind: str) -> list[dict]:
+        with self.connection() as db:
+            rows = db.execute(
+                "SELECT r.data, r.import_id, i.source, i.imported_at "
+                "FROM records r JOIN imports i ON i.id=r.import_id "
+                "WHERE kind=? ORDER BY r.identity",
+                (kind,),
+            ).fetchall()
+        return [
+            dict(
+                data=json.loads(row["data"]),
+                import_id=row["import_id"],
+                source=row["source"],
+                imported_at=row["imported_at"],
+            )
+            for row in rows
+        ]

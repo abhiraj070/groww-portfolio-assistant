@@ -41,6 +41,26 @@ See [import schema and calculation rules](equity-imports.md). Imports are offlin
 in the service/CLI layer. Neither imported gains nor current-position gains establish lifetime
 taxable gains. Do not sum them together.
 
+## Mutual fund namespace
+
+All routes under `/api/v1/mf` are protected GETs. Models and ingestion rules are documented
+in [mutual funds](mutual-funds.md). No Groww MF endpoint is assumed.
+
+| Path | Response model / query |
+| --- | --- |
+| `/holdings`, `/portfolio/allocation` | List of MFHolding, by folio/scheme with units, remaining cost, NAV date/source, valuation, returns and weights |
+| `/portfolio/summary`, `/portfolio/analytics`, `/portfolio/returns`, `/realised-pnl` | MFPortfolioResponse: holdings, costs/values, gross/net gains, dividend_income, sip_investment, FIFO matches, timestamps and coverage warnings |
+| `/transactions`, `/purchases`, `/redemptions`, `/sip`, `/sip/history`, `/dividends` | MFTransactionsResponse: transactions with source/import timestamp, total, offset, limit, scope |
+| `/nav/{scheme_id}` | Latest StoredNAV (observation + source/import timestamp), or 404 nav_unavailable |
+| `/nav/{scheme_id}/history` | List of StoredNAV, optional inclusive start/end ISO dates |
+| `/schemes` | Latest imported NAV metadata per scheme, offset/limit |
+| `/benchmark-returns`, `/expense-ratio`, `/fund-overlap` | UnavailableMetric: available=false, metric, reason, required_source |
+
+Scheme IDs are numeric strings of 1..12 digits. Offset 0..1000000 (default 0), limit
+1..1000 (default 100); NAV date ranges must be ordered. Financial values serialize as strings.
+No NAV history is synthesized between dates. Purchase reads include switch-ins/reinvestments;
+redemptions include switch-outs; dividends include reinvestment income (avoid duplicate rows).
+
 ## Access and response format
 
 Base URL: `http://127.0.0.1:8000`. All `/api/v1` routes require `X-API-Key`.

@@ -13,6 +13,7 @@ from app.services.holdings_service import HoldingsService
 from app.services.instruments_service import InstrumentsService
 from app.services.ledger_service import LedgerService
 from app.services.market_data_service import MarketDataService
+from app.services.mf_service import MFService
 from app.services.orders_service import OrdersService
 from app.services.portfolio_service import PortfolioService
 from app.services.positions_service import PositionsService
@@ -29,6 +30,7 @@ class Services:
     ledger: LedgerService | None = None
     equity_history: EquityHistoryService | None = None
     instruments: InstrumentsService | None = None
+    mf: MFService | None = None
 
     def close(self):
         self.client.close()
@@ -66,4 +68,5 @@ class Services:
             ledger,
             EquityHistoryService(ledger),
             InstrumentsService(settings.groww_request_timeout_seconds),
+            MFService(ledger),
         )

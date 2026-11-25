@@ -64,6 +64,9 @@ No account data, actual credentials or live Groww calls are used.
 
 ## Primary references
 
+Mutual funds use independent offline CAS/statement and AMFI ingestion. The audited SDK does
+not establish an MF portfolio integration; no unverified SDK or private website APIs are called.
+
 - [Introduction, authentication and rate limits](https://groww.in/trade-api/docs/python-sdk)
 - [Holdings and positions](https://groww.in/trade-api/docs/python-sdk/portfolio)
 - [Orders SDK](https://groww.in/trade-api/docs/python-sdk/orders)

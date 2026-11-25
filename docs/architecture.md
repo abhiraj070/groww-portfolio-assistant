@@ -15,6 +15,11 @@ and a lock-protected cache. Services.close owns both provider and catalog client
 
 ## Boundaries
 
+MFIngestionService validates independent statement/NAV schemas and uses LedgerService's
+transactional records table. MFService performs FIFO per folio/scheme and consumes imported
+NAV observations. No equity/Groww models or live MF account endpoints are used. `records`
+stores validated Decimal JSON, original rows and import provenance for future domains.
+
 FastAPI routes -> reusable services -> read-only GrowwClient -> official Groww SDK or the
 narrow HTTPX order-list fallback. Analytics performs Decimal calculations over validated
 holdings, positions and prices. Service modules do not import FastAPI.

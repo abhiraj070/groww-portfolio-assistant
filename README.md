@@ -13,6 +13,10 @@ per-order executions, valued holdings, official instrument lookup and imported t
 realised gains. See [equity import instructions](docs/equity-imports.md). Imports run locally;
 all HTTP routes remain read-only. The ledger is not assumed to be complete lifetime history.
 
+The mutual-fund module under `/api/v1/mf` reads normalized statements and imported AMFI NAV
+observations: holdings, purchases, SIP history, redemptions, dividends and FIFO gains.
+See [MF ingestion and metric limitations](docs/mutual-funds.md).
+
 - Fetch holdings, positions, account profile, and paginated orders for the current trading day.
 - Retrieve LTP, quotes, current OHLC snapshots, and historical candles.
 - Calculate holdings cost, market value, unrealised P&L, simple absolute and percentage returns.
