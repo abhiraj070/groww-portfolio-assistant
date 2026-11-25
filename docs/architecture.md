@@ -2,6 +2,10 @@
 
 ## Expanded equity module
 
+The ledger now has [ordered transactional migrations](storage.md), captured holding snapshots
+and verified equity/MF adjustment events. HistoryService owns offline adjustment ingestion and
+snapshot capture. FIFO consumes events without rewriting original executions.
+
 `/stocks` shares existing portfolio/market handlers, adding valued holdings and thin adapters
 for order details, per-order executions, catalog and ledger analytics. `LedgerService` owns
 local SQLite connections per operation, transactionally imports canonical delivery executions,

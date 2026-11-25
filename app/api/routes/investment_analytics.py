@@ -1,8 +1,10 @@
 from datetime import date
+from typing import Annotated
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
 from app.api.routes.portfolio import ServiceDependency
+from app.schemas.history import SnapshotsResponse
 from app.schemas.investment_analytics import (
     CombinedPortfolio,
     PerformanceResponse,
@@ -61,3 +63,12 @@ def sectors(services: ServiceDependency):
 @router.get("/tax-report", response_model=TaxDataResponse)
 def tax(services: ServiceDependency, start: date | None = None, end: date | None = None):
     return services.investment.tax_data(start, end)
+
+
+@router.get("/snapshots", response_model=SnapshotsResponse)
+def snapshots(
+    services: ServiceDependency,
+    offset: Annotated[int, Query(ge=0, le=1000000)] = 0,
+    limit: Annotated[int, Query(ge=1, le=1000)] = 100,
+):
+    return services.history.snapshots(offset, limit)

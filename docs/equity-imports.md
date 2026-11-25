@@ -49,7 +49,8 @@ gains. Importing older opening purchases later recalculates the entire FIFO sequ
 An empty ledger has unknown aggregate gains. Even a balanced ledger is never automatically
 certified as lifetime complete. `held`, `partially_sold` and `completely_sold` describe imported
 inventory only; compare against live holdings yourself. Do not use adjusted data and raw split
-events together. Splits, bonuses, transfers and ISIN changes are not inferred or auto-adjusted.
+events together. Corporate actions are not inferred. Verified split/bonus events use the
+separate [adjustment ledger](storage.md); do not duplicate already-adjusted tradebook data.
 
 Contract-note PDFs vary and may be encrypted, aggregate charges or contain non-execution rows.
 No trustworthy generic parser has been established. Convert verified execution rows and charges

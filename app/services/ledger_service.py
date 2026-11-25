@@ -22,6 +22,7 @@ from app.schemas.equity_history import (
     StoredEquityTransaction,
     TradebookResponse,
 )
+from app.services.migrations import migrate
 
 MAX_IMPORT_BYTES = 10 * 1024 * 1024
 MAX_IMPORT_ROWS = 50000
@@ -39,23 +40,7 @@ class LedgerService:
             connection = sqlite3.connect(self.path, timeout=10)
             connection.row_factory = sqlite3.Row
             connection.execute("PRAGMA foreign_keys=ON")
-            connection.executescript("""
-                CREATE TABLE IF NOT EXISTS schema_version (version INTEGER PRIMARY KEY);
-                INSERT OR IGNORE INTO schema_version VALUES (1);
-                CREATE TABLE IF NOT EXISTS imports (
-                    id INTEGER PRIMARY KEY, source TEXT NOT NULL, imported_at TEXT NOT NULL,
-                    digest TEXT NOT NULL, original BLOB NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS equity_transactions (
-                    identity TEXT PRIMARY KEY, data TEXT NOT NULL, raw TEXT NOT NULL,
-                    import_id INTEGER NOT NULL REFERENCES imports(id)
-                );
-                CREATE TABLE IF NOT EXISTS records (
-                    kind TEXT NOT NULL, identity TEXT NOT NULL, data TEXT NOT NULL,
-                    raw TEXT NOT NULL, import_id INTEGER NOT NULL REFERENCES imports(id),
-                    PRIMARY KEY(kind, identity)
-                );
-            """)
+            migrate(connection)
             with connection:
                 yield connection
         except (sqlite3.Error, OSError):

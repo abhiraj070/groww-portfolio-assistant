@@ -73,10 +73,12 @@ Protected GETs under `/api/v1/analytics`; see [performance and financial definit
 | `/risk` | RiskResponse: combined holdings, top five, rankings, HHI, effective holdings, unavailable volatility and warnings |
 | `/sector-exposure` | Equity sector allocations with metadata source/date, unclassified value and equity_only scope |
 | `/tax-report` | Imported matched equity_lots/mf_lots, coverage warnings; optional inclusive start/end disposal dates |
+| `/snapshots` | SnapshotsResponse: captured equity/MF results, total, offset (0..1000000), limit (1..1000), newest first |
 
 Performance query: period=daily|weekly|monthly|quarterly|yearly|all_time (default all_time),
 optional ISO start/end. Invalid/inverted ranges are 422. Missing boundary snapshots return
 available=false with explicit warnings and null metrics, not fabricated observations.
+See [storage and adjustments](storage.md) for migration, capture and action error semantics.
 
 ## Access and response format
 

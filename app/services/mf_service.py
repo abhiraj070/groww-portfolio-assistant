@@ -1,10 +1,12 @@
 """Statement-backed MF FIFO and valuation, independent of equity and Groww services."""
 
 from collections import defaultdict, deque
+from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from app.core.exceptions import ServiceError
+from app.schemas.history import MFUnitAdjustment
 from app.schemas.mutual_funds import (
     MFHolding,
     MFPortfolioResponse,
@@ -20,6 +22,14 @@ from app.utils.calculations import percentage
 ZERO = Decimal(0)
 PURCHASES = {"PURCHASE", "SIP", "SWITCH_IN", "REINVESTMENT"}
 REDEMPTIONS = {"REDEMPTION", "SWITCH_OUT"}
+
+
+@dataclass
+class MFLot:
+    purchase: StoredMFTransaction
+    units: Decimal
+    cost: Decimal
+    charges: Decimal | None
 
 
 class MFService:
@@ -105,6 +115,14 @@ class MFService:
         grouped = defaultdict(list)
         for row in transactions:
             grouped[(row.folio, row.scheme_code)].append(row)
+        adjustments = defaultdict(list)
+        for record in self.ledger.records("mf_adjustment"):
+            action = MFUnitAdjustment(**record["data"])
+            adjustments[(action.folio, action.scheme_code)].append(action)
+        if set(adjustments) - set(grouped):
+            raise ServiceError(
+                "adjustment_mismatch", "MF adjustment has no imported opening units", 409
+            )
         holdings, matches = [], []
         navs = {}
         for record in self.ledger.records("nav"):
@@ -117,23 +135,52 @@ class MFService:
             lots = deque()
             unmatched = ZERO
             scheme_matches = []
-            for row in rows:
+            events = [(r.date, 1, r.transaction_id, r) for r in rows]
+            events += [(a.date, 0, a.action_id, a) for a in adjustments[(folio, code)]]
+            for _, _, _, row in sorted(events, key=lambda event: event[:3]):
+                if isinstance(row, MFUnitAdjustment):
+                    if unmatched or sum((lot.units for lot in lots), ZERO) != row.eligible_units:
+                        raise ServiceError(
+                            "adjustment_mismatch",
+                            "MF adjustment entitlement differs from imported units",
+                            409,
+                        )
+                    for lot in lots:
+                        lot.units = lot.units * row.numerator / row.denominator
+                    continue
                 if row.kind in PURCHASES:
-                    lots.append([row, row.units])
+                    lots.append(MFLot(row, row.units, row.amount, row.charges))
                 elif row.kind in REDEMPTIONS:
                     remaining = row.units
+                    remaining_proceeds, sale_charges = row.amount, row.charges
                     while remaining and lots:
-                        purchase, units = lots[0]
+                        lot = lots[0]
+                        purchase, units = lot.purchase, lot.units
                         matched = min(remaining, units)
-                        cost, proceeds = (
-                            purchase.amount * matched / purchase.units,
-                            row.amount * matched / row.units,
+                        cost = lot.cost if matched == units else lot.cost * matched / units
+                        proceeds = (
+                            remaining_proceeds
+                            if matched == remaining
+                            else remaining_proceeds * matched / remaining
+                        )
+                        buy_charge = (
+                            None
+                            if lot.charges is None
+                            else lot.charges
+                            if matched == units
+                            else lot.charges * matched / units
+                        )
+                        sell_charge = (
+                            None
+                            if sale_charges is None
+                            else sale_charges
+                            if matched == remaining
+                            else sale_charges * matched / remaining
                         )
                         charges = (
                             None
-                            if purchase.charges is None or row.charges is None
-                            else purchase.charges * matched / purchase.units
-                            + row.charges * matched / row.units
+                            if buy_charge is None or sell_charge is None
+                            else buy_charge + sell_charge
                         )
                         scheme_matches.append(
                             MFSaleMatch(
@@ -155,15 +202,22 @@ class MFService:
                             )
                         )
                         remaining -= matched
-                        lots[0][1] -= matched
-                        if not lots[0][1]:
+                        remaining_proceeds -= proceeds
+                        lot.units -= matched
+                        lot.cost -= cost
+                        if buy_charge is not None:
+                            lot.charges -= buy_charge
+                        if sell_charge is not None:
+                            sale_charges -= sell_charge
+                        if not lot.units:
                             lots.popleft()
                     unmatched += remaining
-            units = None if unmatched else sum((q for _, q in lots), ZERO)
-            cost = None if unmatched else sum((p.amount * q / p.units for p, q in lots), ZERO)
+            units = None if unmatched else sum((lot.units for lot in lots), ZERO)
+            cost = None if unmatched else sum((lot.cost for lot in lots), ZERO)
             nav = navs.get(code)
             # A NAV before the last imported unit movement cannot value that position.
             movement_dates = [r.date for r in rows if r.kind != "DIVIDEND"]
+            movement_dates += [a.date for a in adjustments[(folio, code)]]
             usable = nav is not None and (not movement_dates or nav.date >= max(movement_dates))
             value = ZERO if units == 0 else None if units is None or not usable else units * nav.nav
             pnl = None if value is None or cost is None else value - cost

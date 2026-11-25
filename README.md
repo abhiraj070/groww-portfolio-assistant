@@ -21,6 +21,9 @@ Combined reads under `/api/v1/analytics` cover investment value, asset exposure,
 and snapshot/cash-flow-based performance. [Metric assumptions and input formats](docs/performance.md)
 explain when XIRR, CAGR and historical returns are available.
 
+[Historical storage](docs/storage.md) covers versioned migrations, explicit snapshot capture
+and verified stock/MF unit adjustments. Private ledger files remain outside Git.
+
 - Fetch holdings, positions, account profile, and paginated orders for the current trading day.
 - Retrieve LTP, quotes, current OHLC snapshots, and historical candles.
 - Calculate holdings cost, market value, unrealised P&L, simple absolute and percentage returns.

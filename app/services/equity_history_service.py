@@ -1,12 +1,25 @@
 """Recalculate FIFO from imported executions without inventing opening inventory."""
 
 from collections import defaultdict, deque
+from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 
+from app.core.exceptions import ServiceError
 from app.schemas.equity_history import EquityHistoryResponse, SaleMatch, StockHistory
+from app.schemas.history import EquityAction
 from app.services.ledger_service import LedgerService
 
 ZERO = Decimal(0)
+
+
+@dataclass
+class EquityLot:
+    trade_id: str
+    acquired_at: datetime
+    remaining: Decimal
+    remaining_cost: Decimal
+    remaining_charges: Decimal | None
 
 
 class EquityHistoryService:
@@ -17,41 +30,112 @@ class EquityHistoryService:
         grouped = defaultdict(list)
         for transaction in self.ledger.all_transactions():
             grouped[transaction.isin].append(transaction)
+        actions = defaultdict(list)
+        for record in self.ledger.records("equity_action"):
+            action = EquityAction(**record["data"])
+            actions[action.isin].append(action)
+        if set(actions) - set(grouped):
+            raise ServiceError(
+                "adjustment_mismatch", "Corporate action has no imported opening history", 409
+            )
         stocks = []
         for isin, records in sorted(grouped.items()):
             lots = deque()
             matches = []
             bought = sold = buy_value = sell_value = unmatched = ZERO
             first_purchase = None
-            for row in records:
+            events = [(r.traded_at, 1, r.trade_id, r) for r in records]
+            events += [(a.effective_at, 0, a.action_id, a) for a in actions[isin]]
+            for _, _, _, row in sorted(events, key=lambda event: event[:3]):
+                if isinstance(row, EquityAction):
+                    eligible = sum((lot.remaining for lot in lots), ZERO)
+                    if eligible != row.eligible_quantity or unmatched:
+                        raise ServiceError(
+                            "adjustment_mismatch",
+                            "Corporate-action entitlement differs from imported inventory",
+                            409,
+                        )
+                    if row.kind == "SPLIT":
+                        for lot in lots:
+                            quantity = lot.remaining * row.numerator / row.denominator
+                            if quantity != quantity.to_integral_value():
+                                raise ServiceError(
+                                    "unsupported_adjustment",
+                                    "Fractional lots require verified cash-in-lieu accounting",
+                                    409,
+                                )
+                            lot.remaining = quantity
+                    else:
+                        bonus = eligible * row.numerator / row.denominator
+                        if bonus != bonus.to_integral_value():
+                            raise ServiceError(
+                                "unsupported_adjustment",
+                                "Fractional bonus entitlements need verified treatment",
+                                409,
+                            )
+                        lots.append(
+                            EquityLot(
+                                f"ACTION-{row.action_id}",
+                                row.effective_at,
+                                bonus,
+                                ZERO,
+                                ZERO,
+                            )
+                        )
+                    continue
                 if row.side == "BUY":
                     bought += row.quantity
                     buy_value += row.quantity * row.price
                     first_purchase = first_purchase or row.traded_at.date()
-                    lots.append([row, row.quantity])
+                    lots.append(
+                        EquityLot(
+                            row.trade_id,
+                            row.traded_at,
+                            row.quantity,
+                            row.price * row.quantity,
+                            row.charges,
+                        )
+                    )
                     continue
                 sold += row.quantity
                 sell_value += row.quantity * row.price
                 remaining = row.quantity
+                sale_charges = row.charges
                 while remaining and lots:
-                    purchase, available = lots[0]
-                    quantity = min(remaining, available)
+                    purchase = lots[0]
+                    quantity = min(remaining, purchase.remaining)
+                    cost = (
+                        purchase.remaining_cost
+                        if quantity == purchase.remaining
+                        else purchase.remaining_cost * quantity / purchase.remaining
+                    )
+                    buy_charge = (
+                        None
+                        if purchase.remaining_charges is None
+                        else purchase.remaining_charges
+                        if quantity == purchase.remaining
+                        else purchase.remaining_charges * quantity / purchase.remaining
+                    )
+                    sell_charge = (
+                        None
+                        if sale_charges is None
+                        else sale_charges
+                        if quantity == remaining
+                        else sale_charges * quantity / remaining
+                    )
                     charges = (
                         None
-                        if purchase.charges is None or row.charges is None
-                        else (
-                            purchase.charges * quantity / purchase.quantity
-                            + row.charges * quantity / row.quantity
-                        )
+                        if buy_charge is None or sell_charge is None
+                        else buy_charge + sell_charge
                     )
-                    cost, proceeds = purchase.price * quantity, row.price * quantity
+                    proceeds = row.price * quantity
                     matches.append(
                         SaleMatch(
                             isin=isin,
                             trading_symbol=row.trading_symbol,
                             buy_trade_id=purchase.trade_id,
                             sell_trade_id=row.trade_id,
-                            acquired_at=purchase.traded_at,
+                            acquired_at=purchase.acquired_at,
                             sold_at=row.traded_at,
                             quantity=quantity,
                             cost=cost,
@@ -59,16 +143,21 @@ class EquityHistoryService:
                             gross_realised_pnl=proceeds - cost,
                             charges=charges,
                             net_realised_pnl=None if charges is None else proceeds - cost - charges,
-                            holding_days=(row.traded_at.date() - purchase.traded_at.date()).days,
+                            holding_days=(row.traded_at.date() - purchase.acquired_at.date()).days,
                         )
                     )
                     remaining -= quantity
-                    lots[0][1] -= quantity
-                    if not lots[0][1]:
+                    purchase.remaining -= quantity
+                    purchase.remaining_cost -= cost
+                    if buy_charge is not None:
+                        purchase.remaining_charges -= buy_charge
+                    if sell_charge is not None:
+                        sale_charges -= sell_charge
+                    if not purchase.remaining:
                         lots.popleft()
                 unmatched += remaining
-            quantity_left = sum((q for _, q in lots), ZERO)
-            cost_left = sum((p.price * q for p, q in lots), ZERO)
+            quantity_left = sum((lot.remaining for lot in lots), ZERO)
+            cost_left = sum((lot.remaining_cost for lot in lots), ZERO)
             gross = None if unmatched else sum((m.gross_realised_pnl for m in matches), ZERO)
             net = (
                 None

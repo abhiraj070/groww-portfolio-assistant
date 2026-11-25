@@ -9,6 +9,7 @@ from app.core.exceptions import ServiceError
 from app.services.analytics_service import SectorMetadata
 from app.services.equity_history_service import EquityHistoryService
 from app.services.groww_client import GrowwClient
+from app.services.history_service import HistoryService
 from app.services.holdings_service import HoldingsService
 from app.services.instruments_service import InstrumentsService
 from app.services.investment_service import InvestmentService
@@ -35,6 +36,7 @@ class Services:
     mf: MFService | None = None
     investment: InvestmentService | None = None
     performance: PerformanceService | None = None
+    history: HistoryService | None = None
 
     def close(self):
         self.client.close()
@@ -77,4 +79,5 @@ class Services:
             mf,
             InvestmentService(portfolio, mf, history, ledger),
             PerformanceService(ledger),
+            HistoryService(ledger, portfolio, mf),
         )
